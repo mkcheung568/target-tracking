@@ -1,0 +1,23 @@
+services:
+  target-tracking:
+    image: target-tracking-dev:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    environment:
+      NODE_ENV: development
+      HOSTNAME: 0.0.0.0
+      PORT: "3005"
+      NEXT_TELEMETRY_DISABLED: "1"
+    ports:
+      - "${APP_PORT:-3005}:3005"
+    volumes:
+      - .:/app
+      - target_tracking_node_modules:/app/node_modules
+      - target_tracking_next:/app/.next
+    command: npm run dev
+
+volumes:
+  target_tracking_node_modules:
+  target_tracking_next:

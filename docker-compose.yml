@@ -1,0 +1,21 @@
+services:
+  target-tracking:
+    image: target-tracking:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: "3005"
+      NEXT_TELEMETRY_DISABLED: "1"
+    ports:
+      - "${APP_PORT:-3005}:3005"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3005/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3

@@ -76,3 +76,13 @@ MVP 的非目標是後端、資料庫、登入、雲端同步、多人協作和�
 - 不用英文 fallback 掩蓋缺少的翻譯 key。
 - 不自行改變 port `3005`、資料版本或現有產品範圍。
 - 不刪除使用者資料、重設 localStorage 或移除現有功能來解決測試問題。
+
+## Docker 與執行環境
+
+- `Dockerfile` 使用 Node.js 22 Alpine 的多階段 build；`development` target 用於熱更新，`runner` target 用於 production。
+- 正式容器以非 root 使用者執行 `npm run start`，容器內固定監聽 `3005`；主機 port 由 Compose 的 `APP_PORT` 控制，預設也是 `3005`。
+- `docker-compose.yml` 是 production 配置；`docker-compose.dev.yml` 是掛載工作目錄的 development 配置。修改其中一個時，確認兩者的啟動指令、環境變數和 port 說明仍一致。
+- Docker 只負責封裝和啟動現有 Web App，不可因此加入後端、資料庫、登入、雲端同步或伺服器端目標資料儲存。
+- 目標、check-ins、語言和通知設定仍由瀏覽器 localStorage 保存；不可建立 Docker volume 或 server API，假裝它能保存使用者資料。
+- `.dockerignore` 必須排除 `.env`、依賴、建置輸出和本機工具資料；不要把 secret 放進 image 或 Compose 檔案。
+- 修改 Docker、Compose、Node image、啟動 port 或正式執行流程後，除了 npm checks，也必須執行 `docker compose config`、production image build 和容器 HTTP／health check。

@@ -140,6 +140,79 @@ Next.js 會在本機 production server 提供網站。部署到一般 Node.js �
 
 Next.js serves the production build through its Node server. On a regular Node.js host, use Node.js 22 LTS, HTTPS, and a reverse proxy such as Nginx; set `PORT` to the port provided by your host.
 
+## Docker 部署 / Docker deployment
+
+專案提供 production 和 development 兩套 Docker 配置，容器內的 Next.js server 固定使用 `3005`。正式 image 使用 Node.js 22 Alpine、多階段 build 和非 root 使用者，並在啟動後提供 health check。
+
+This repository includes separate Docker configurations for production and development. The Next.js server listens on container port `3005`. The production image uses Node.js 22 Alpine, a multi-stage build, a non-root user, and a container health check.
+
+### Production container
+
+```bash
+docker compose up --build -d
+```
+
+開啟 <http://localhost:3005>。查看容器狀態和 logs：
+
+Open <http://localhost:3005>. Check the container status and logs with:
+
+```bash
+docker compose ps
+docker compose logs -f target-tracking
+```
+
+停止容器：
+
+Stop the container with:
+
+```bash
+docker compose down
+```
+
+如果主機的 `3005` 已被其他專案使用，可以只更改主機 port，容器內仍然使用 `3005`：
+
+If another project already uses host port `3005`, change only the host port while the container continues to listen on `3005`:
+
+```bash
+APP_PORT=3006 docker compose up --build -d
+```
+
+然後開啟 <http://localhost:3006>。同一時間不要讓本機 `npm run dev` 和 Docker container 佔用同一個主機 port。
+
+Then open <http://localhost:3006>. Do not run the local `npm run dev` process and the Docker container on the same host port at the same time.
+
+### Development container
+
+Development compose 會掛載專案目錄，修改程式碼後會由 Next.js dev server 重新載入：
+
+The development compose file mounts the project directory so the Next.js dev server can reload code changes:
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+在另一個終端停止它：
+
+Stop it from another terminal with:
+
+```bash
+docker compose -f docker-compose.dev.yml down
+```
+
+同樣可以用 `APP_PORT=3006` 避免 port 衝突。Docker 配置只封裝和運行現有 Web App，不會新增後端、資料庫或登入功能。
+
+The same `APP_PORT=3006` override can be used to avoid a port conflict. Docker only packages and runs the existing Web App; it does not add a backend, database, or authentication.
+
+### Docker 與本機資料 / Docker and local data
+
+目標、打卡、語言和通知設定仍然儲存在使用者瀏覽器的 localStorage，Docker container 重建或重啟不會替你備份這些資料。只要繼續使用同一個瀏覽器 origin，container 重啟後仍可讀到瀏覽器記錄。
+
+Goals, check-ins, language, and notification settings remain in the browser localStorage. Rebuilding or restarting a Docker container does not back up this data. The browser can read its existing records after a container restart as long as you keep using the same origin.
+
+`localhost:3005` 和 `localhost:3006` 是不同 origin，因此兩者不會共用 localStorage。切換 port、瀏覽器或裝置前，請先在 Settings 匯出 JSON，再在新的 origin 匯入。
+
+`localhost:3005` and `localhost:3006` are different origins, so they do not share localStorage. Before changing ports, browsers, or devices, export a JSON backup from Settings and import it in the new origin.
+
 ## Vercel 部署 / Deploy to Vercel
 
 1. 把這個 repository 匯入 Vercel。
