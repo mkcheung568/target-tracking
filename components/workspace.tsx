@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -272,7 +272,28 @@ function GoalForm({
 }) {
   const save = useStore((s) => s.save);
   const records = useStore((s) => s.checkIns);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(""),
+    [closeConfirm, setCloseConfirm] = useState(false),
+    [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const unsavedRef = useRef(false);
+  const defaultValues = useMemo(
+    () =>
+      goal || {
+        id: crypto.randomUUID(),
+        name: "",
+        description: "",
+        startDate: day(),
+        endDate: day(addDays(new Date(), 30)),
+        frequency: "daily" as const,
+        days: [1],
+        targetScore: 20,
+        targetRate: 80,
+        reward: "",
+        status: "active" as const,
+        redeemedAt: null,
+      },
+    [goal],
+  );
   const {
     control,
     handleSubmit,
@@ -280,23 +301,14 @@ function GoalForm({
     formState: { errors },
   } = useForm<Goal>({
     resolver: zodResolver(goalSchema),
-    defaultValues: goal || {
-      id: crypto.randomUUID(),
-      name: "",
-      description: "",
-      startDate: day(),
-      endDate: day(addDays(new Date(), 30)),
-      frequency: "daily",
-      days: [1],
-      targetScore: 20,
-      targetRate: 80,
-      reward: "",
-      status: "active",
-      redeemedAt: null,
-    },
+    defaultValues,
   });
   const frequency = useWatch({ control, name: "frequency" }),
     selected = useWatch({ control, name: "days" }) ?? [];
+  const markUnsaved = () => {
+    unsavedRef.current = true;
+    setHasUnsavedChanges(true);
+  };
   const field = (name: keyof Goal, label: string, type = "text") => (
     <Controller
       name={name}
@@ -308,11 +320,13 @@ function GoalForm({
           label={label}
           type={type}
           slotProps={{ inputLabel: { shrink: true } }}
-          onChange={(e) =>
+          onInput={markUnsaved}
+          onChange={(e) => {
+            markUnsaved();
             field.onChange(
               type === "number" ? Number(e.target.value) : e.target.value,
-            )
-          }
+            );
+          }}
           error={!!errors[name]}
           helperText={
             validationText(language, String(errors[name]?.message ?? "")) ||
@@ -324,17 +338,36 @@ function GoalForm({
   );
   const tx = (key: string, values?: Record<string, string | number>) =>
     t(language, key, values);
+  const submitGoal = (g: Goal) => {
+    if (records.some((r) => r.goalId === g.id && !scheduled(g, r.date))) {
+      setError("新排程會排除已有打卡。請保留已有記錄的日期與星期。");
+      return;
+    }
+    save(g);
+    onClose();
+  };
+  const requestClose = () => {
+    if (unsavedRef.current || hasUnsavedChanges) {
+      setCloseConfirm(true);
+      return;
+    }
+    onClose();
+  };
   return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+    <>
+      <Dialog
+        open
+        onClose={(_, reason) => {
+          if (reason === "backdropClick" || reason === "escapeKeyDown")
+            requestClose();
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
       <form
-        onSubmit={handleSubmit((g) => {
-          if (records.some((r) => r.goalId === g.id && !scheduled(g, r.date))) {
-            setError("新排程會排除已有打卡。請保留已有記錄的日期與星期。");
-            return;
-          }
-          save(g);
-          onClose();
-        })}
+        onSubmit={handleSubmit(submitGoal)}
+        onInput={markUnsaved}
+        onChange={markUnsaved}
       >
         <DialogTitle>
           {goal ? tx("編輯目標") : tx("為自己訂一個目標")}
@@ -361,9 +394,12 @@ function GoalForm({
                   select
                   label={tx("頻率")}
                   onChange={(e) => {
+                    markUnsaved();
                     field.onChange(e);
                     if (e.target.value === "weekly")
-                      setValue("days", [selected[0] ?? 1]);
+                      setValue("days", [selected[0] ?? 1], {
+                        shouldDirty: true,
+                      });
                   }}
                 >
                   <MenuItem value="daily">{tx("Daily")}</MenuItem>
@@ -381,8 +417,10 @@ function GoalForm({
                   ).map((v, i) => (
                     <Button
                       key={v}
+                      type="button"
                       variant={selected.includes(i) ? "contained" : "outlined"}
-                      onClick={() =>
+                      onClick={() => {
+                        markUnsaved();
                         setValue(
                           "days",
                           frequency === "weekly"
@@ -390,8 +428,9 @@ function GoalForm({
                             : selected.includes(i)
                               ? selected.filter((d) => d !== i)
                               : [...selected, i],
-                        )
-                      }
+                          { shouldDirty: true },
+                        );
+                      }}
                     >
                       {v}
                     </Button>
@@ -413,7 +452,15 @@ function GoalForm({
               name="status"
               control={control}
               render={({ field }) => (
-                <TextField {...field} select label={tx("狀態")}>
+                <TextField
+                  {...field}
+                  select
+                  label={tx("狀態")}
+                  onChange={(e) => {
+                    markUnsaved();
+                    field.onChange(e);
+                  }}
+                >
                   {["draft", "active", "paused", "abandoned"].map((s) => (
                     <MenuItem key={s} value={s}>
                       {statusText(language, s)}
@@ -428,13 +475,48 @@ function GoalForm({
           </div>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>{tx("取消")}</Button>
+          <Button type="button" onClick={requestClose}>
+            {tx("取消")}
+          </Button>
           <Button type="submit" variant="contained">
             {tx("儲存目標")}
           </Button>
         </DialogActions>
       </form>
-    </Dialog>
+      </Dialog>
+      <Dialog
+        open={closeConfirm}
+        onClose={() => setCloseConfirm(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>{tx("未儲存變更")}</DialogTitle>
+        <DialogContent>{tx("你有尚未儲存的目標內容，要儲存後離開嗎？")}</DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCloseConfirm(false)}>
+            {tx("繼續編輯")}
+          </Button>
+          <Button
+            color="error"
+            onClick={() => {
+              setCloseConfirm(false);
+              onClose();
+            }}
+          >
+            {tx("放棄變更")}
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setCloseConfirm(false);
+              void handleSubmit(submitGoal)();
+            }}
+          >
+            {tx("儲存並離開")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
 export default function Workspace() {
