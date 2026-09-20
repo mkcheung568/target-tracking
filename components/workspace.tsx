@@ -819,22 +819,30 @@ function SortableGoalCard({
   disabled: boolean;
   children: (handle: SortableHandle) => ReactNode;
 }) {
-  const sortable = useSortable({ id, disabled });
+  const {
+    attributes,
+    isDragging,
+    listeners,
+    setActivatorNodeRef,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id, disabled });
   const style: CSSProperties = {
-    transform: CSS.Transform.toString(sortable.transform),
-    transition: sortable.transition,
-    zIndex: sortable.isDragging ? 2 : undefined,
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 2 : undefined,
   };
   return (
     <div
-      ref={sortable.setNodeRef}
-      className={`sortable-goal${sortable.isDragging ? " is-dragging" : ""}`}
+      ref={setNodeRef}
+      className={`sortable-goal${isDragging ? " is-dragging" : ""}`}
       style={style}
     >
       {children({
-        attributes: sortable.attributes,
-        listeners: sortable.listeners,
-        setActivatorNodeRef: sortable.setActivatorNodeRef,
+        attributes,
+        listeners,
+        setActivatorNodeRef,
       })}
     </div>
   );
@@ -899,9 +907,7 @@ function WorkspaceView() {
         m.status === store.goalStatusFilter),
   );
   const visibleGoalIds = visibleGoals.map(({ g }) => g.id);
-  useEffect(() => {
-    if (arrangingGoals && visibleGoalIds.length < 2) setArrangingGoals(false);
-  }, [arrangingGoals, visibleGoalIds.length]);
+  const arrangementActive = arrangingGoals && visibleGoalIds.length >= 2;
   const goalName = (id: string | number) =>
     store.goals.find((candidate) => candidate.id === String(id))?.name ??
     tx("目標");
@@ -928,7 +934,7 @@ function WorkspaceView() {
       tx("Move cancelled for {goal}.", { goal: goalName(active.id) }),
   };
   const handleGoalDragEnd = ({ active, over }: DragEndEvent) => {
-    if (!arrangingGoals || !over || active.id === over.id) return;
+    if (!arrangementActive || !over || active.id === over.id) return;
     store.reorderGoal(String(active.id), String(over.id));
   };
   const notificationSettings = store.notificationSettings;
@@ -1500,7 +1506,7 @@ function WorkspaceView() {
                       <Button
                         variant="outlined"
                         startIcon={<ArrowUpDown size={17} />}
-                        disabled={visibleGoals.length < 2}
+                        disabled={!arrangingGoals && visibleGoals.length < 2}
                         onClick={() => setArrangingGoals((value) => !value)}
                       >
                         {arrangingGoals ? tx("Done") : tx("Arrange")}
@@ -1546,7 +1552,7 @@ function WorkspaceView() {
                       ))}
                     </TextField>
                   </div>
-                  {arrangingGoals && (
+                  {arrangementActive && (
                     <p className="arrange-note">
                       {tx(
                         "Drag cards with the handle or use the arrow buttons.",
@@ -1574,11 +1580,11 @@ function WorkspaceView() {
                         {visibleGoals.map(({ g }) => (
                           <SortableGoalCard
                             id={g.id}
-                            disabled={!arrangingGoals}
+                            disabled={!arrangementActive}
                             key={g.id}
                           >
                             {(sortable) =>
-                              card(g, false, arrangingGoals, sortable)
+                              card(g, false, arrangementActive, sortable)
                             }
                           </SortableGoalCard>
                         ))}
