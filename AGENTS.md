@@ -8,81 +8,81 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Target Tracking AI 開發指引
+# Target Tracking AI Development Guide
 
-## 專案目的與範圍
+## Project purpose and scope
 
-Target Tracking 是 local-first 個人目標追蹤 Web App。使用者建立有日期和頻率的目標，針對排程日記錄 `completed`、`failed` 或 `skipped`，再透過 Dashboard、History、Analytics 和 Goal Detail 回看進度。
+Target Tracking is a local-first personal goal-tracking web app. Users create goals with dates and frequencies, record scheduled days as `completed`, `failed`, or `skipped`, and review progress through Dashboard, History, Analytics, and Goal Detail.
 
-MVP 的非目標是後端、資料庫、登入、雲端同步、多人協作和瀏覽器關閉後的真正 Web Push。除非需求明確改變範圍，AI 不應自行加入這些功能。
+The MVP explicitly excludes a backend, database, login, cloud sync, multi-user collaboration, and true Web Push after the browser closes. Do not add these features unless the requested scope explicitly changes.
 
-## 技術與目錄責任
+## Technology and directory responsibilities
 
-- `app/`：Next.js App Router 頁面、layout 和全域 CSS。
-- `components/workspace.tsx`：主要 client UI、頁面視圖、表單和互動流程。
-- `lib/domain.ts`：Zod schemas、日期／排程規則、check-in 計算、derived metrics 和示範資料。
-- `lib/store.ts`：Zustand state、persist、localStorage adapter 和資料 actions。
-- `lib/i18n.ts`：繁體中文、簡體中文、英文的翻譯 key 和文字。
-- `tests/`：domain 和資料規則測試。
+- `app/`: Next.js App Router pages, layout, and global CSS.
+- `components/workspace.tsx`: Primary client UI, page views, forms, and interaction flows.
+- `lib/domain.ts`: Zod schemas, date and scheduling rules, check-in calculations, derived metrics, and demo data.
+- `lib/store.ts`: Zustand state, persistence, localStorage adapter, and data actions.
+- `lib/i18n.ts`: Translation keys and copy for Traditional Chinese, Simplified Chinese, and English.
+- `tests/`: Domain and data-rule tests.
 
-使用 App Router 和 TypeScript strict mode。需要瀏覽器 API 或 Zustand hook 的 component 才使用 `"use client"`。
+Use App Router and TypeScript strict mode. Add `"use client"` only to components that require browser APIs or Zustand hooks.
 
-## 資料不變量與狀態管理
+## Data invariants and state management
 
-- Check-ins 是唯一的行動資料 source of truth；不要持久化 Net Score、Completion Rate、Streak、Health 等 derived metrics。
-- 一個 goal 在同一日期只能有一筆 check-in；修改當天結果應替換原有記錄，而不是新增重複資料。
-- `No Record` 是沒有 check-in，不是 `failed`；只有明確的 `failed` 才會扣分。
-- `Skipped` 計 0 分，且不列入 Completion Rate 分母。
-- 所有新增或匯入資料都必須通過 Zod schema；修改 schema 時同步更新 backup、store、UI 和測試。
-- 不要在 component 直接讀寫 localStorage；所有持久化資料經由 Zustand store actions。
-- `backupSchema` 的版本變更必須考慮舊資料匯入和向後相容。
-- 任何刪除、清除或 reset 操作都必須保留現有確認流程，避免意外破壞使用者資料。
+- Check-ins are the only source of truth for user actions. Do not persist derived metrics such as Net Score, Completion Rate, Streak, or Health.
+- A goal can have only one check-in per date. Updating today's result must replace the existing record rather than add a duplicate.
+- `No Record` means there is no check-in; it is not `failed`. Only an explicit `failed` result subtracts a point.
+- `Skipped` contributes zero points and is excluded from the Completion Rate denominator.
+- All created and imported data must pass the Zod schema. When a schema changes, update backup handling, store behavior, UI, and tests together.
+- Components must not read or write localStorage directly. Route all persistent data through Zustand store actions.
+- Any `backupSchema` version change must address old imports and backward compatibility.
+- Preserve the existing confirmation flow for every delete, clear, or reset action to prevent accidental data loss.
 
-## Coding pattern
+## Coding patterns
 
-- 優先使用現有 domain helper（例如 `metrics`、`scheduled`、`dates`、`scoreOf`），不要在 UI 重新實作計算規則。
-- 表單使用 React Hook Form + `zodResolver`；不要繞過 schema 建立未驗證資料。
-- UI state 由 Zustand actions 更新；不要在多個 component 建立平行資料副本。
-- 所有使用者可見文字使用 `t(language, key)`；新增 key 時必須同步提供三種語言，避免中英文混用。
-- 對外資料、檔案匯入和使用者輸入都採取明確型別和失敗處理。
-- 使用語意化 HTML、ARIA label、keyboard focus 和可操作的按鈕，不要用不可存取的 click-only `div`。
-- 改動後保持當天 check-in 可修改、同日不可重複、No Record 不扣分等既有行為。
+- Prefer existing domain helpers such as `metrics`, `scheduled`, `dates`, and `scoreOf`; do not reimplement calculation rules in the UI.
+- Use React Hook Form with `zodResolver`; do not bypass schemas to create unvalidated data.
+- Update UI state through Zustand actions; do not create parallel copies of persistent state across components.
+- Route all user-visible copy through `t(language, key)`. Add Traditional Chinese, Simplified Chinese, and English values for every new key.
+- Use explicit types and failure handling for external data, file imports, and user input.
+- Use semantic HTML, ARIA labels, keyboard focus, and operable buttons. Do not use inaccessible click-only `div` elements.
+- Preserve editable same-day check-ins, same-day uniqueness, and the rule that No Record does not subtract points.
 
-## UI、Design pattern 與視覺風格
+## UI, design patterns, and visual style
 
-- 整體風格是 minimal、calm、productivity：淺色背景、白色卡片、細邊框、低陰影和清晰留白。
-- 沿用 `app/globals.css` 的 token 和現有 class pattern；不要為同一種元件引入另一套色彩或 spacing 系統。
-- Indigo 是主要 accent；emerald 表示正向／完成，rose 表示負向／未完成，amber 表示警示／需要調整。
-- Desktop 使用固定 sidebar；窄螢幕使用 mobile bottom navigation。所有頁面必須在手機和桌面保持可用。
-- MUI 用於 Button、Dialog、TextField、Select、Chip、Alert、Switch 等互動元件；自訂布局和視覺優先沿用現有 CSS。
-- Recharts 用於趨勢圖和統計圖；Framer Motion 用於必要的狀態轉換和液體進度動畫。
-- 動畫要服務於數據理解，並尊重 `prefers-reduced-motion`；不要加入持續閃爍或干擾閱讀的效果。
-- 正負分數的 liquid bar 必須保留中央 0 軸，正分向右、負分向左，並使用語意化 meter 屬性。
+- Keep the visual style minimal, calm, and productivity-focused: light backgrounds, white cards, fine borders, low shadows, and clear spacing.
+- Reuse the tokens and class patterns in `app/globals.css`; do not introduce a second color or spacing system for equivalent components.
+- Indigo is the primary accent. Emerald represents positive or completed states, rose represents negative or failed states, and amber represents warnings or adjustments.
+- Desktop uses a fixed sidebar, while narrow screens use mobile bottom navigation. Every page must remain usable on mobile and desktop.
+- Use MUI for interactive components such as Button, Dialog, TextField, Select, Chip, Alert, and Switch. Prefer existing CSS for custom layout and appearance.
+- Use Recharts for trends and statistics, and Framer Motion for necessary state transitions and liquid progress animation.
+- Animation must help users understand data and must respect `prefers-reduced-motion`. Do not add continuous flashing or distracting effects.
+- The positive/negative liquid score bar must retain a central zero axis, render positive scores to the right and negative scores to the left, and expose semantic meter attributes.
 
-## 修改流程
+## Change workflow
 
-1. 先閱讀 `lib/domain.ts`、`lib/store.ts`、`lib/i18n.ts` 和相關頁面，確認資料流與現有文字。
-2. 先決定修改屬於 domain、store、i18n、UI 或 CSS，再在正確層級實作。
-3. 若新增資料欄位，更新 Zod schema、demo、store merge、backup import/export、表單和測試。
-4. 若新增畫面文字，同步更新三種語言，檢查所有狀態、錯誤和空狀態。
-5. 保留現有 responsive、focus、ARIA 和 reduced-motion 行為。
-6. 完成後執行 `npm run lint`、`npm run type-check`、`npm run test` 和 `npm run build`。
-7. 回報修改摘要、驗證結果和仍存在的限制，不要宣稱未驗證的行為。
+1. Read `lib/domain.ts`, `lib/store.ts`, `lib/i18n.ts`, and the relevant page before changing behavior so the current data flow and copy are understood.
+2. Decide whether the change belongs in the domain, store, i18n, UI, or CSS layer, and implement it at the correct level.
+3. When adding a data field, update its Zod schema, demo data, persistence merge, backup import/export, form, and tests.
+4. When adding visible copy, update all three languages and check every state, error, and empty state.
+5. Preserve responsive layout, focus handling, ARIA support, and reduced-motion behavior.
+6. Run `npm run lint`, `npm run type-check`, `npm run test`, and `npm run build` after changes.
+7. Report the change summary, actual validation results, and remaining limitations without claiming unverified behavior.
 
-## 不應做的事
+## Do not
 
-- 不直接編輯 `node_modules`、`.next` 或 generated cache。
-- 不把 derived metrics 重複寫入 localStorage。
-- 不用英文 fallback 掩蓋缺少的翻譯 key。
-- 不自行改變 port `3005`、資料版本或現有產品範圍。
-- 不刪除使用者資料、重設 localStorage 或移除現有功能來解決測試問題。
+- Do not edit `node_modules`, `.next`, or generated caches directly.
+- Do not duplicate derived metrics in localStorage.
+- Do not use an English fallback to hide a missing translation key.
+- Do not change port `3005`, the data version, or the existing product scope without an explicit request.
+- Do not delete user data, reset localStorage, or remove existing behavior to make tests pass.
 
-## Docker 與執行環境
+## Docker and runtime environment
 
-- `Dockerfile` 使用 Node.js 22 Alpine 的多階段 build；`development` target 用於熱更新，`runner` target 用於 production。
-- 正式容器以非 root 使用者執行 `npm run start`，容器內固定監聽 `3005`；主機 port 由 Compose 的 `APP_PORT` 控制，預設也是 `3005`。
-- `docker-compose.yml` 是 production 配置；`docker-compose.dev.yml` 是掛載工作目錄的 development 配置。修改其中一個時，確認兩者的啟動指令、環境變數和 port 說明仍一致。
-- Docker 只負責封裝和啟動現有 Web App，不可因此加入後端、資料庫、登入、雲端同步或伺服器端目標資料儲存。
-- 目標、check-ins、語言和通知設定仍由瀏覽器 localStorage 保存；不可建立 Docker volume 或 server API，假裝它能保存使用者資料。
-- `.dockerignore` 必須排除 `.env`、依賴、建置輸出和本機工具資料；不要把 secret 放進 image 或 Compose 檔案。
-- 修改 Docker、Compose、Node image、啟動 port 或正式執行流程後，除了 npm checks，也必須執行 `docker compose config`、production image build 和容器 HTTP／health check。
+- `Dockerfile` uses a multi-stage Node.js 22 Alpine build for the production image.
+- The production container runs `npm run start` as a non-root user and listens on container port `3005`. Compose controls the host port through `APP_PORT`, which also defaults to `3005`.
+- `docker-compose.yml` is the production configuration. Keep its command, environment variables, health check, and port documentation aligned with the Dockerfile.
+- Docker only packages and starts the existing web app. Do not add a backend, database, login, cloud sync, or server-side goal storage through Docker changes.
+- Goals, check-ins, language, notification settings, and UI preferences remain in browser localStorage. Do not create a Docker volume or server API that implies server-side persistence.
+- `.dockerignore` must exclude `.env`, dependencies, build output, and local tool data. Never place secrets in the image or Compose file.
+- After changing Docker, Compose, the Node image, startup port, or production runtime flow, run the npm checks, `docker compose config`, a production image build, and container HTTP and health checks.

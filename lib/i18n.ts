@@ -123,6 +123,12 @@ const copy: Record<Language, Copy> = {
     頻率: "頻率",
     "Target score": "目標分數",
     "目標完成率 %": "目標完成率 %",
+    目標分數說明: "目標分數說明",
+    目標完成率說明: "目標完成率說明",
+    "目標分數解釋":
+      "目標分數是要達到的淨分數：完成 +1、未完成 −1、略過 0。系統會按排程日數自動填入；如想提早完成或接受較少的淨完成次數，可自行調低。",
+    "目標完成率解釋":
+      "完成率 = 完成 ÷（完成 + 未完成）；略過及未記錄不計算。預設 100%，如能接受部分排程日未完成，可自行調低。",
     完成後的小獎勵: "完成後的小獎勵",
     狀態: "狀態",
     "分數與完成率均達標後自動完成。到期未達標則顯示已到期。":
@@ -330,6 +336,12 @@ copy["zh-Hans"] = {
   頻率: "频率",
   "Target score": "目标分数",
   "目標完成率 %": "目标完成率 %",
+  目標分數說明: "目标分数说明",
+  目標完成率說明: "目标完成率说明",
+  "目標分數解釋":
+    "目标分数是要达到的净分数：完成 +1、未完成 −1、略过 0。系统会按排程日数自动填入；如想提前完成或接受较少的净完成次数，可自行调低。",
+  "目標完成率解釋":
+    "完成率 = 完成 ÷（完成 + 未完成）；略过及未记录不计算。默认 100%，如能接受部分排程日未完成，可自行调低。",
   完成後的小獎勵: "完成后的小奖励",
   狀態: "状态",
   "分數與完成率均達標後自動完成。到期未達標則顯示已到期。":
@@ -544,6 +556,12 @@ copy.en = {
   頻率: "Frequency",
   "Target score": "Target score",
   "目標完成率 %": "Target completion rate %",
+  目標分數說明: "About target score",
+  目標完成率說明: "About target completion rate",
+  "目標分數解釋":
+    "Target score is the Net Score to reach: completed +1, failed −1, and skipped 0. It is filled from the number of scheduled days; lower it if you want to finish earlier or require fewer net completions.",
+  "目標完成率解釋":
+    "Completion rate is completed ÷ (completed + failed); skipped and unrecorded days are excluded. It defaults to 100%. Lower it when some failed check-ins are acceptable.",
   完成後的小獎勵: "Reward for finishing",
   狀態: "Status",
   "分數與完成率均達標後自動完成。到期未達標則顯示已到期。":
@@ -594,6 +612,7 @@ copy.en = {
   "這段時間還沒有打卡。從今天記錄第一步。":
     "No check-ins in this period. Start with one today.",
   語言: "Language",
+  目標: "Goal",
   繁體中文: "Traditional Chinese",
   簡體中文: "Simplified Chinese",
   英文: "English",

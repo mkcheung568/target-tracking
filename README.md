@@ -3,93 +3,75 @@
 [![CI](https://github.com/mkcheung568/target-tracking/actions/workflows/ci.yml/badge.svg)](https://github.com/mkcheung568/target-tracking/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-indigo.svg)](LICENSE)
 
-一個 local-first 的個人目標追蹤工具，幫助你把「想完成的事」變成每天可以記錄、回看和調整的行動。
-
 Target Tracking is a local-first personal goal tracker for turning intentions into daily actions you can record, review, and adjust.
 
-## 這個項目是什麼？ / What is it?
+## What is it?
 
-Target Tracking 將目標週期、排程、每日打卡、進度指標、趨勢和獎勵放在同一個工作空間。你可以建立一個有開始／結束日期和頻率的目標，然後每天標記「完成」、「未完成」或「略過」。Dashboard 會把最近的行動整理成可以立即理解的訊號：淨分數、完成率、時間進度、連續完成和進度健康度。
+Target Tracking brings goal periods, schedules, daily check-ins, metrics, trends, and rewards into one calm workspace. Create a goal with dates and a frequency, then record each scheduled day as completed, failed, or skipped. The dashboard turns those actions into clear signals: Net Score, Completion Rate, Time Progress, streaks, and health.
 
-Target Tracking brings goal periods, schedules, daily check-ins, metrics, trends, and rewards into one calm workspace. Create a goal with dates and a frequency, then record each scheduled day as completed, failed, or skipped. The dashboard turns those actions into clear signals: net score, completion rate, time progress, streaks, and health.
+## Why does it exist?
 
-## 為什麼會有這個項目？ / Why does it exist?
+Many goals remain as a task-list item or a good intention. The missing piece is often a low-friction daily review:
 
-很多目標停留在待辦清單或一句口號，問題通常不是不知道想要什麼，而是缺少一個低摩擦的每日回顧方式：
+- A goal needs clear start and end dates, an execution frequency, and measurable success conditions.
+- Completed and failed actions need an honest record that does not rely on memory.
+- Completion Rate, accumulated score, and elapsed time should remain distinct measurements.
+- A day without a record should not silently become a failure.
+- Historical data should help users recognize when a goal needs adjustment.
 
-- 只有目標名稱，沒有清楚的開始、結束和執行頻率。
-- 做到和做不到沒有持續記錄，過了一週便只能靠印象回想。
-- 完成率、累積分數和時間進度容易被混成一個不準確的百分比。
-- 「今天沒有記錄」和「今天明確失敗」被誤當成同一件事。
-- 發現落後時，沒有足夠的歷史資料幫助自己調整目標。
+## How it helps
 
-Many goals remain as a task-list item or a good intention. The missing piece is often a low-friction daily review: clear dates and frequency, an honest record of what happened, and enough history to decide what to change. A missed record should not silently become a failure, and one progress number should not hide the difference between effort, results, and elapsed time.
+- Turn a vague intention into an actionable goal with dates, frequency, and success conditions.
+- Record a scheduled day as completed, failed, or skipped with one click, and revise today's result when needed.
+- Compare Net Score and Completion Rate instead of relying on one ambiguous progress number.
+- See momentum through Streak, Best Streak, and seven/30-day trends.
+- Use Ahead, On Track, Slightly Behind, and At Risk indicators to decide when to adjust.
+- Keep motivation and completion history through locked, unlocked, and redeemed reward states.
+- Export and import JSON backups while keeping ownership of local data.
 
-## 對使用者有什麼幫助？ / How it helps
-
-- 把模糊目標轉成有日期、頻率和成功條件的可執行目標。
-- 每天用一次點擊記錄完成、未完成或略過，並可修改當天結果。
-- 同時查看淨分數和完成率，避免只看一個數字作出錯誤判斷。
-- 用 Streak、Best Streak 和 7／30 日趨勢看見自己的節奏。
-- 透過 Ahead、On Track、Slightly Behind 和 At Risk 快速判斷是否需要調整。
-- 以獎勵的 locked、unlocked 和 redeemed 狀態保留動機與完成記錄。
-- 用 JSON Export／Import 備份資料，資料由使用者自己掌握。
-
-It helps you make goals measurable, record the truth of each scheduled day, understand momentum over time, spot risk early, and adjust the plan before a goal quietly disappears.
-
-## 主要畫面 / Main views
+## Main views
 
 ### Today / Dashboard
 
-一眼查看今天排定的目標、快速打卡、整體完成數、淨分數、最佳連續和最近 7 天趨勢。
-
-See today’s scheduled goals, quick check-ins, completion summary, net score, best streak, and the recent seven-day trend at a glance.
+See today's scheduled goals, quick check-ins, completion summary, Net Score, Best Streak, and the recent seven-day trend at a glance.
 
 ![Today Dashboard](docs/screenshots/dashboard.png)
 
-*Desktop Today Dashboard — 今日 Dashboard（示範資料 / demo data）*
+*Desktop Today Dashboard with demo data.*
 
 ![Today Dashboard on mobile](docs/screenshots/dashboard-mobile.png)
 
-*Mobile Today view — 手機版 Today 與底部導覽（示範資料 / demo data）*
+*Mobile Today view with bottom navigation and demo data.*
 
 ### Goals / Goal Detail
 
-集中管理目標，支援建立、編輯、暫停、刪除和狀態管理。Goal Detail 會顯示 overview、7／30／all trends、簡易 heatmap、備註、歷史和獎勵。
-
-Manage goals with create, edit, pause, delete, and lifecycle states. Goal Detail includes overview, seven/30-day/all-time trends, a simple heatmap, notes, history, and reward status.
+Manage goals with create, edit, pause, delete, and lifecycle states. Goal Detail includes an overview, seven/30-day/all-time trends, a simple heatmap, notes, history, and reward status.
 
 ![Goal Detail](docs/screenshots/goal-detail.png)
 
-*Goal Detail — 目標詳情、趨勢、日曆和歷史（示範資料 / demo data）*
+*Goal Detail with progress, trends, calendar, and history using demo data.*
 
 ### History / Analytics
-
-History 以桌面表格和手機卡片顯示所有打卡；Analytics 提供最近 7／30 日的完成、未完成、略過統計和趨勢圖。
 
 History provides a desktop table and mobile cards for every check-in. Analytics summarizes completed, failed, and skipped results with seven/30-day trends.
 
 ### Settings
 
-設定繁體中文、簡體中文或英文，匯出／匯入 JSON，重設示範資料，並設定瀏覽器打卡提醒時間。
-
-Choose Traditional Chinese, Simplified Chinese, or English; export/import JSON; reset demo data; and configure browser check-in reminder time.
+Choose Traditional Chinese, Simplified Chinese, or English; export or import JSON; reset demo data; and configure the browser check-in reminder time.
 
 ![Settings and notifications](docs/screenshots/settings-notifications.png)
 
-*Settings — 語言、備份和提醒設定（示範資料 / demo data）*
+*Settings with language, backup, and reminder controls using demo data.*
 
-## 核心規則 / Core rules
+## Core rules
 
-- `Completed` 會加 `+1`，`Failed` 會減 `-1`，`Skipped` 為 `0`。
-- 沒有打卡的日期是 `No Record`，不會自動被計為失敗。
-- 同一個目標同一天只能有一筆 check-in，但當天結果可以修改。
-- Completion Rate = 完成次數 ÷（完成次數 + 未完成次數）；略過和未記錄不列入分母。
-- Check-ins 是資料 source of truth；Net Score、Completion Rate、Streak 等都是即時計算的 derived metrics。
+- `Completed` adds `+1`, `Failed` subtracts `-1`, and `Skipped` contributes `0`.
+- A missing check-in remains `No Record`; it is not silently treated as a failure.
+- One goal can have only one check-in per date, while today's result remains editable.
+- Completion Rate = completed / (completed + failed); skipped and unrecorded days are excluded.
+- Check-ins are the source of truth. Net Score, Completion Rate, Streak, and other metrics are derived at runtime.
 
-`Completed` adds `+1`, `Failed` subtracts `-1`, and `Skipped` contributes `0`. A missing check-in remains `No Record`, so it is not silently treated as a failure. One goal can have only one check-in per date, while today’s result remains editable.
-
-## 技術棧 / Tech stack
+## Tech stack
 
 - Next.js App Router + TypeScript
 - Tailwind CSS + MUI
@@ -99,7 +81,7 @@ Choose Traditional Chinese, Simplified Chinese, or English; export/import JSON; 
 - date-fns for date calculations
 - Zod + React Hook Form for validation and forms
 
-### 專案結構 / Project structure
+### Project structure
 
 ```text
 app/                 App Router pages, layout, global styles
@@ -111,9 +93,7 @@ tests/               Domain and behavior tests
 docs/screenshots/    README product screenshots
 ```
 
-## 安裝與開發 / Install and develop
-
-需求：Node.js 22 LTS 或更新版本，以及 npm。專案已提交 `package-lock.json`，開發時建議使用 `npm ci` 取得可重現的依賴版本。
+## Install and develop
 
 Prerequisites: Node.js 22 LTS or newer and npm. The committed `package-lock.json` makes `npm ci` the recommended reproducible install command.
 
@@ -124,11 +104,9 @@ npm ci
 npm run dev
 ```
 
-開啟 <http://localhost:3005>。如果 `3005` 已被使用，可在啟動正式伺服器時指定其他 `PORT`；開發腳本預設固定使用 `3005`。
+Open <http://localhost:3005>. The development script intentionally uses port `3005`.
 
-Open <http://localhost:3005>. If another service uses port `3005`, set a different `PORT` when starting the production server. The development script intentionally defaults to `3005`.
-
-## 正式運行 / Run in production locally
+## Run in production locally
 
 ```bash
 npm ci
@@ -136,23 +114,17 @@ npm run build
 PORT=3005 npm run start
 ```
 
-Next.js 會在本機 production server 提供網站。部署到一般 Node.js 主機時，請使用 Node.js 22 LTS、HTTPS 和一個反向代理（例如 Nginx），並把 `PORT` 指向主機提供的服務埠。
+Next.js serves the production build through its Node server. On a regular Node.js host, use Node.js 22 LTS, HTTPS, and a reverse proxy such as Nginx; set `PORT` to the port provided by the host.
 
-Next.js serves the production build through its Node server. On a regular Node.js host, use Node.js 22 LTS, HTTPS, and a reverse proxy such as Nginx; set `PORT` to the port provided by your host.
+## Docker deployment
 
-## Docker 部署 / Docker deployment
+The production container listens on port `3005`. It uses Node.js 22 Alpine, a multi-stage build, a non-root user, and a container health check.
 
-專案提供 production 和 development 兩套 Docker 配置，容器內的 Next.js server 固定使用 `3005`。正式 image 使用 Node.js 22 Alpine、多階段 build 和非 root 使用者，並在啟動後提供 health check。
-
-This repository includes separate Docker configurations for production and development. The Next.js server listens on container port `3005`. The production image uses Node.js 22 Alpine, a multi-stage build, a non-root user, and a container health check.
-
-### Production container
+### Start the production container
 
 ```bash
 docker compose up --build -d
 ```
-
-開啟 <http://localhost:3005>。查看容器狀態和 logs：
 
 Open <http://localhost:3005>. Check the container status and logs with:
 
@@ -161,7 +133,22 @@ docker compose ps
 docker compose logs -f target-tracking
 ```
 
-停止容器：
+### Rebuild and restart after updates
+
+After updating the source code, dependencies, or Dockerfile, rebuild the image and recreate the production container from the repository root:
+
+```bash
+docker compose up --build --force-recreate -d
+docker compose ps
+```
+
+After the health check completes, `docker compose ps` should report the container as healthy. Inspect startup logs with:
+
+```bash
+docker compose logs -f target-tracking
+```
+
+Running `docker compose restart` alone only restarts the existing container. It does not rebuild the image and will not apply source-code or dependency updates.
 
 Stop the container with:
 
@@ -169,82 +156,40 @@ Stop the container with:
 docker compose down
 ```
 
-如果主機的 `3005` 已被其他專案使用，可以只更改主機 port，容器內仍然使用 `3005`：
-
 If another project already uses host port `3005`, change only the host port while the container continues to listen on `3005`:
 
 ```bash
-APP_PORT=3006 docker compose up --build -d
+APP_PORT=3006 docker compose up --build --force-recreate -d
 ```
 
-然後開啟 <http://localhost:3006>。同一時間不要讓本機 `npm run dev` 和 Docker container 佔用同一個主機 port。
+Then open <http://localhost:3006>. Keep the same `APP_PORT` value on later rebuilds. Do not run `npm run dev` and the Docker container on the same host port at the same time.
 
-Then open <http://localhost:3006>. Do not run the local `npm run dev` process and the Docker container on the same host port at the same time.
+### Docker and local data
 
-### Development container
+Goals, check-ins, language, notification settings, and UI preferences remain in browser localStorage. Rebuilding or restarting the Docker container does not back up or delete this data. The browser can read its existing records after a container restart as long as the same origin is used.
 
-Development compose 會掛載專案目錄，修改程式碼後會由 Next.js dev server 重新載入：
+`localhost:3005` and `localhost:3006` are different origins, so they do not share localStorage. Before changing ports, browsers, or devices, export a JSON backup from Settings and import it at the new origin.
 
-The development compose file mounts the project directory so the Next.js dev server can reload code changes:
-
-```bash
-docker compose -f docker-compose.dev.yml up --build
-```
-
-在另一個終端停止它：
-
-Stop it from another terminal with:
-
-```bash
-docker compose -f docker-compose.dev.yml down
-```
-
-同樣可以用 `APP_PORT=3006` 避免 port 衝突。Docker 配置只封裝和運行現有 Web App，不會新增後端、資料庫或登入功能。
-
-The same `APP_PORT=3006` override can be used to avoid a port conflict. Docker only packages and runs the existing Web App; it does not add a backend, database, or authentication.
-
-### Docker 與本機資料 / Docker and local data
-
-目標、打卡、語言和通知設定仍然儲存在使用者瀏覽器的 localStorage，Docker container 重建或重啟不會替你備份這些資料。只要繼續使用同一個瀏覽器 origin，container 重啟後仍可讀到瀏覽器記錄。
-
-Goals, check-ins, language, and notification settings remain in the browser localStorage. Rebuilding or restarting a Docker container does not back up this data. The browser can read its existing records after a container restart as long as you keep using the same origin.
-
-`localhost:3005` 和 `localhost:3006` 是不同 origin，因此兩者不會共用 localStorage。切換 port、瀏覽器或裝置前，請先在 Settings 匯出 JSON，再在新的 origin 匯入。
-
-`localhost:3005` and `localhost:3006` are different origins, so they do not share localStorage. Before changing ports, browsers, or devices, export a JSON backup from Settings and import it in the new origin.
-
-## Vercel 部署 / Deploy to Vercel
-
-1. 把這個 repository 匯入 Vercel。
-2. Framework Preset 選擇 Next.js。
-3. Install command 使用 `npm ci`，Build command 使用 `npm run build`。
-4. 目前不需要設定環境變數。
-5. 完成部署後，在瀏覽器開啟 Vercel URL。
+## Deploy to Vercel
 
 1. Import this repository into Vercel.
 2. Select Next.js as the framework preset.
-3. Use `npm ci` for install and `npm run build` for the build command.
-4. No environment variables are required at this stage.
+3. Use `npm ci` for the install command and `npm run build` for the build command.
+4. No environment variables are currently required.
 5. Open the Vercel URL after deployment completes.
 
-## 資料、通知與注意事項 / Data, notifications, and limitations
+## Data, notifications, and limitations
 
-- 資料只儲存在目前瀏覽器的 localStorage，不會自動上傳到伺服器。
-- 清除網站資料、使用無痕模式或更換瀏覽器／裝置，都可能看不到原有記錄。
-- 請定期在 Settings 匯出 JSON；匯入會取代目前資料，匯入前應先備份。
-- 目前沒有後端、資料庫、登入、雲端同步或多人協作。
-- 瀏覽器提醒只會在 App 開啟時檢查；瀏覽器完全關閉時的真正 Web Push 需要後端服務。
-- 不要把真實密碼、API key 或其他敏感資料放進目標描述、備註或 issue。
+- Data stays in the current browser's localStorage and is not uploaded automatically.
+- Clearing site data, using private browsing, or changing browsers or devices can make existing records unavailable.
+- Export JSON regularly. Import replaces the current dataset, so export first.
+- The MVP has no backend, database, login, cloud sync, or collaboration.
+- Browser reminders are checked while the app is open. True Web Push while the browser is closed requires a backend service.
+- Do not place passwords, API keys, or other sensitive information in goal descriptions, notes, or issues.
 
-Data stays in the current browser’s localStorage and is not uploaded automatically. Clearing site data, using private browsing, or switching devices can hide existing records. Export JSON regularly. Import replaces the current dataset, so export first. The MVP has no backend, database, login, cloud sync, or collaboration. Browser reminders are checked while the app is open; true Web Push while the browser is closed requires a backend service.
+## Open-source contribution
 
-## 開源貢獻 / Open-source contribution
-
-請先閱讀 [CONTRIBUTING.md](CONTRIBUTING.md)。提交 Pull Request 前，請通過 lint、type-check、test 和 build；功能修改應包含相應的 domain 或 UI 驗證。Bug 和功能建議可以使用 GitHub Issues。
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Run lint, type-check, test, and build locally; feature changes should include the relevant domain or UI verification. Use GitHub Issues for bugs and feature ideas.
-
-安全問題請參考 [SECURITY.md](SECURITY.md)，行為準則請參考 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Run lint, type-check, tests, and the production build locally. Feature changes should include relevant domain or UI validation. Use GitHub Issues for bugs and feature ideas.
 
 For security concerns, read [SECURITY.md](SECURITY.md). Community expectations are documented in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 

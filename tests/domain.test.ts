@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import {
   metrics,
   backupSchema,
+  goalSchema,
   Goal,
   CheckIn,
   scheduled,
+  scheduledDayCount,
   day,
   notificationSettingsSchema,
 } from "../lib/domain";
@@ -78,6 +80,33 @@ test("weekly and custom scheduled days", () => {
     false,
   );
 });
+test("scheduled day count includes both endpoints and respects frequency", () => {
+  assert.equal(scheduledDayCount(g), 10);
+  assert.equal(
+    scheduledDayCount({ ...g, frequency: "weekly", days: [4] }),
+    2,
+  );
+  assert.equal(
+    scheduledDayCount({ ...g, frequency: "custom", days: [0, 6] }),
+    3,
+  );
+  assert.equal(scheduledDayCount({ ...g, endDate: "" }), 0);
+});
+test("goal requires at least one scheduled day", () => {
+  const result = goalSchema.safeParse({
+    ...g,
+    startDate: "2026-01-02",
+    endDate: "2026-01-02",
+    frequency: "weekly",
+    days: [4],
+  });
+  assert.equal(result.success, false);
+  if (!result.success)
+    assert.equal(
+      result.error.issues.some((issue) => issue.message === "日期範圍內沒有排程日"),
+      true,
+    );
+});
 test("backup rejects duplicates, orphan records and impossible dates", () => {
   const b = {
     version: 1,
@@ -117,4 +146,9 @@ test("store updates one record per date and cascades deletion", () => {
   assert.equal(metrics(goal, useStore.getState().checkIns).score, -1);
   useStore.getState().remove("a");
   assert.equal(useStore.getState().checkIns.length, 0);
+});
+test("store remembers the goal status filter", () => {
+  useStore.getState().setGoalStatusFilter("active");
+  assert.equal(useStore.getState().goalStatusFilter, "active");
+  useStore.getState().setGoalStatusFilter("all");
 });

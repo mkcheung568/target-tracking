@@ -10,8 +10,16 @@ import {
 export const day = (d = new Date()) => format(d, "yyyy-MM-dd");
 const date = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "日期無效")
   .refine((v) => isValid(parseISO(v)) && day(parseISO(v)) === v, "日期無效");
+export const goalStatusSchema = z.enum([
+  "draft",
+  "active",
+  "paused",
+  "completed",
+  "expired",
+  "abandoned",
+]);
 export const goalSchema = z
   .object({
     id: z.string().min(1),
@@ -21,17 +29,17 @@ export const goalSchema = z
     endDate: date,
     frequency: z.enum(["daily", "weekly", "custom"]),
     days: z.array(z.number().int().min(0).max(6)).max(7),
-    targetScore: z.number().int().min(1).max(10000),
-    targetRate: z.number().min(1).max(100),
+    targetScore: z
+      .number({ error: "請輸入有效目標分數" })
+      .int()
+      .min(1)
+      .max(10000),
+    targetRate: z
+      .number({ error: "請輸入有效目標完成率" })
+      .min(1)
+      .max(100),
     reward: z.string().max(200),
-    status: z.enum([
-      "draft",
-      "active",
-      "paused",
-      "completed",
-      "expired",
-      "abandoned",
-    ]),
+    status: goalStatusSchema,
     redeemedAt: z.string().nullable(),
   })
   .superRefine((g, c) => {
@@ -58,6 +66,18 @@ export const goalSchema = z
         code: "custom",
         path: ["days"],
         message: "Weekly 請選一天；Custom 請至少選一天",
+      });
+    if (
+      g.endDate >= g.startDate &&
+      (g.frequency === "daily" ||
+        (g.days.length > 0 &&
+          (g.frequency !== "weekly" || g.days.length === 1))) &&
+      scheduledDayCount(g) === 0
+    )
+      c.addIssue({
+        code: "custom",
+        path: ["days"],
+        message: "日期範圍內沒有排程日",
       });
   });
 export type Goal = z.infer<typeof goalSchema>;
@@ -101,7 +121,11 @@ export const backupSchema = z
     }
   });
 export type Backup = z.infer<typeof backupSchema>;
-export function scheduled(g: Goal, d: string) {
+export type GoalSchedule = Pick<
+  Goal,
+  "startDate" | "endDate" | "frequency" | "days"
+>;
+export function scheduled(g: GoalSchedule, d: string) {
   return (
     d >= g.startDate &&
     d <= g.endDate &&
@@ -114,6 +138,15 @@ export function dates(start: string, end: string) {
     { length: differenceInCalendarDays(parseISO(end), parseISO(start)) + 1 },
     (_, i) => day(addDays(parseISO(start), i)),
   );
+}
+export function scheduledDayCount(g: GoalSchedule) {
+  if (
+    !date.safeParse(g.startDate).success ||
+    !date.safeParse(g.endDate).success ||
+    g.endDate < g.startDate
+  )
+    return 0;
+  return dates(g.startDate, g.endDate).filter((d) => scheduled(g, d)).length;
 }
 export const scoreOf = (r: CheckIn) =>
   r.result === "completed" ? 1 : r.result === "failed" ? -1 : 0;
