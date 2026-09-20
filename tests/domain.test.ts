@@ -16,6 +16,8 @@ const g: Goal = {
   id: "a",
   name: "Goal",
   description: "",
+  icon: "target",
+  color: "indigo",
   startDate: "2026-01-01",
   endDate: "2026-01-10",
   frequency: "daily",
@@ -126,6 +128,21 @@ test("backup rejects duplicates, orphan records and impossible dates", () => {
     false,
   );
 });
+test("legacy goals receive default appearance values", () => {
+  const legacyGoal: Partial<Goal> = { ...g };
+  delete legacyGoal.icon;
+  delete legacyGoal.color;
+  const result = backupSchema.safeParse({
+    version: 1,
+    goals: [legacyGoal],
+    checkIns: [],
+  });
+  assert.equal(result.success, true);
+  if (result.success) {
+    assert.equal(result.data.goals[0].icon, "target");
+    assert.equal(result.data.goals[0].color, "indigo");
+  }
+});
 test("notification settings default safely and validate time", () => {
   const settings = notificationSettingsSchema.parse({});
   assert.equal(settings.enabled, false);
@@ -146,6 +163,31 @@ test("store updates one record per date and cascades deletion", () => {
   assert.equal(metrics(goal, useStore.getState().checkIns).score, -1);
   useStore.getState().remove("a");
   assert.equal(useStore.getState().checkIns.length, 0);
+});
+test("store reorders goals around a target and ignores invalid moves", () => {
+  const goals = [
+    { ...g, id: "a" },
+    { ...g, id: "b" },
+    { ...g, id: "c" },
+  ];
+  useStore.setState({ goals, checkIns: [] });
+  useStore.getState().reorderGoal("c", "a");
+  assert.deepEqual(
+    useStore.getState().goals.map((goal) => goal.id),
+    ["c", "a", "b"],
+  );
+  useStore.getState().reorderGoal("c", "c");
+  useStore.getState().reorderGoal("missing", "a");
+  useStore.getState().reorderGoal("c", "missing");
+  assert.deepEqual(
+    useStore.getState().goals.map((goal) => goal.id),
+    ["c", "a", "b"],
+  );
+  useStore.getState().reorderGoal("c", "b");
+  assert.deepEqual(
+    useStore.getState().goals.map((goal) => goal.id),
+    ["a", "b", "c"],
+  );
 });
 test("store remembers the goal status filter", () => {
   useStore.getState().setGoalStatusFilter("active");

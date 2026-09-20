@@ -1,5 +1,12 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -39,8 +46,38 @@ import {
   Upload,
   Leaf,
   Info,
+  Dumbbell,
+  BookOpen,
+  Brain,
+  Heart,
+  Star,
+  Sprout,
+  CalendarDays,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  GripVertical,
+  type LucideIcon,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type Announcements,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  rectSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -52,7 +89,7 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-import { useForm, Controller, useWatch } from "react-hook-form";
+import { useForm, Controller, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addDays, format, parseISO } from "date-fns";
 import {
@@ -93,6 +130,47 @@ const nav = [
   ["/analytics", "Analytics", ChartNoAxesCombined],
   ["/settings", "Settings", Settings],
 ] as const;
+const goalIconChoices: {
+  value: Goal["icon"];
+  label: string;
+  Icon: LucideIcon;
+}[] = [
+  { value: "target", label: "Target", Icon: Target },
+  { value: "dumbbell", label: "Dumbbell", Icon: Dumbbell },
+  { value: "book", label: "Book", Icon: BookOpen },
+  { value: "brain", label: "Brain", Icon: Brain },
+  { value: "heart", label: "Heart", Icon: Heart },
+  { value: "star", label: "Star", Icon: Star },
+  { value: "sprout", label: "Sprout", Icon: Sprout },
+  { value: "calendar", label: "Calendar", Icon: CalendarDays },
+];
+const goalColors: {
+  value: Goal["color"];
+  label: string;
+  hex: string;
+  tint: string;
+}[] = [
+  { value: "indigo", label: "Indigo", hex: "#5b5ce2", tint: "#eeefff" },
+  { value: "teal", label: "Teal", hex: "#119b8b", tint: "#e3f6f3" },
+  { value: "emerald", label: "Emerald", hex: "#249565", tint: "#e6f5ed" },
+  { value: "amber", label: "Amber", hex: "#c98a1a", tint: "#fff4dc" },
+  { value: "orange", label: "Orange", hex: "#d96a32", tint: "#fff0e8" },
+  { value: "rose", label: "Rose", hex: "#d95771", tint: "#ffebf0" },
+  { value: "sky", label: "Sky", hex: "#368bd5", tint: "#e7f3ff" },
+  { value: "violet", label: "Violet", hex: "#8a5bd9", tint: "#f1eafe" },
+];
+const appearanceStyle = (goal: Pick<Goal, "color">): CSSProperties => {
+  const color = goalColors.find((choice) => choice.value === goal.color) ??
+    goalColors[0];
+  return {
+    "--goal-color": color.hex,
+    "--goal-tint": color.tint,
+  } as CSSProperties;
+};
+const GoalGlyph = ({ icon, size = 21 }: { icon: Goal["icon"]; size?: number }) => {
+  const Icon = goalIconChoices.find((choice) => choice.value === icon)?.Icon ?? Target;
+  return <Icon size={size} aria-hidden="true" />;
+};
 const resultText = (language: Language, result: CheckIn["result"]) =>
   t(
     language,
@@ -307,6 +385,8 @@ function GoalForm({
         id: crypto.randomUUID(),
         name: "",
         description: "",
+        icon: "target" as const,
+        color: "indigo" as const,
         startDate: day(),
         endDate: "",
         frequency: "daily" as const,
@@ -325,7 +405,7 @@ function GoalForm({
     setValue,
     formState: { errors },
   } = useForm<Goal>({
-    resolver: zodResolver(goalSchema),
+    resolver: zodResolver(goalSchema) as Resolver<Goal>,
     defaultValues,
   });
   const startDate = useWatch({ control, name: "startDate" }),
@@ -455,6 +535,78 @@ function GoalForm({
   );
   const tx = (key: string, values?: Record<string, string | number>) =>
     t(language, key, values);
+  const appearancePicker = () => (
+    <div className="appearance-picker">
+      <p className="appearance-label">{tx("Appearance")}</p>
+      <div>
+        <span className="appearance-label">{tx("Icon")}</span>
+        <Controller
+          name="icon"
+          control={control}
+          render={({ field }) => (
+            <div
+              className="icon-choice-grid"
+              role="group"
+              aria-label={tx("Choose a goal icon")}
+            >
+              {goalIconChoices.map(({ value, label, Icon }) => (
+                <IconButton
+                  key={value}
+                  type="button"
+                  className={
+                    field.value === value
+                      ? "appearance-option selected"
+                      : "appearance-option"
+                  }
+                  aria-label={tx(label)}
+                  aria-pressed={field.value === value}
+                  onClick={() => {
+                    markUnsaved();
+                    field.onChange(value);
+                  }}
+                >
+                  <Icon size={19} />
+                </IconButton>
+              ))}
+            </div>
+          )}
+        />
+      </div>
+      <div>
+        <span className="appearance-label">{tx("Color")}</span>
+        <Controller
+          name="color"
+          control={control}
+          render={({ field }) => (
+            <div
+              className="color-choice-grid"
+              role="group"
+              aria-label={tx("Choose a goal color")}
+            >
+              {goalColors.map(({ value, label, hex }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={
+                    field.value === value
+                      ? "color-choice selected"
+                      : "color-choice"
+                  }
+                  style={{ "--swatch-color": hex } as CSSProperties}
+                  aria-label={`${tx("Color")}: ${tx(label)}`}
+                  aria-pressed={field.value === value}
+                  onClick={() => {
+                    markUnsaved();
+                    field.onChange(value);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        />
+      </div>
+    </div>
+  );
   const submitGoal = (g: Goal) => {
     if (records.some((r) => r.goalId === g.id && !scheduled(g, r.date))) {
       setError("新排程會排除已有打卡。請保留已有記錄的日期與星期。");
@@ -498,6 +650,7 @@ function GoalForm({
             )}
             {field("name", tx("目標名稱"))}
             {field("description", tx("描述／成功行動"))}
+            {appearancePicker()}
             <div className="two">
               {field("startDate", tx("開始日期"), "date")}
               {field("endDate", tx("結束日期"), "date")}
@@ -652,6 +805,49 @@ function GoalForm({
     </>
   );
 }
+type SortableHandle = Pick<
+  ReturnType<typeof useSortable>,
+  "attributes" | "listeners" | "setActivatorNodeRef"
+>;
+
+function SortableGoalCard({
+  id,
+  disabled,
+  children,
+}: {
+  id: string;
+  disabled: boolean;
+  children: (handle: SortableHandle) => ReactNode;
+}) {
+  const {
+    attributes,
+    isDragging,
+    listeners,
+    setActivatorNodeRef,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id, disabled });
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 2 : undefined,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      className={`sortable-goal${isDragging ? " is-dragging" : ""}`}
+      style={style}
+    >
+      {children({
+        attributes,
+        listeners,
+        setActivatorNodeRef,
+      })}
+    </div>
+  );
+}
+
 export default function Workspace() {
   const path = usePathname();
   return <WorkspaceView key={path} />;
@@ -666,6 +862,7 @@ function WorkspaceView() {
     [range, setRange] = useState(7),
     [search, setSearch] = useState(""),
     [recordFilter, setRecordFilter] = useState("all"),
+    [arrangingGoals, setArrangingGoals] = useState(false),
     [message, setMessage] = useState(""),
     [noteGoal, setNoteGoal] = useState<Goal | null>(null),
     [note, setNote] = useState(""),
@@ -674,6 +871,15 @@ function WorkspaceView() {
     );
   const path = usePathname(),
     router = useRouter();
+  const dragSensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 180, tolerance: 6 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
   const [, tick] = useState(0);
   useEffect(() => {
     let live = true;
@@ -694,6 +900,43 @@ function WorkspaceView() {
     goal = store.goals.find((g) => g.id === detailId),
     page = detailId ? "detail" : path.split("/")[1] || "today";
   const ms = store.goals.map((g) => ({ g, m: metrics(g, store.checkIns) }));
+  const visibleGoals = ms.filter(
+    ({ g, m }) =>
+      g.name.toLowerCase().includes(search.toLowerCase()) &&
+      (store.goalStatusFilter === "all" ||
+        m.status === store.goalStatusFilter),
+  );
+  const visibleGoalIds = visibleGoals.map(({ g }) => g.id);
+  const arrangementActive = arrangingGoals && visibleGoalIds.length >= 2;
+  const goalName = (id: string | number) =>
+    store.goals.find((candidate) => candidate.id === String(id))?.name ??
+    tx("目標");
+  const dragAnnouncements: Announcements = {
+    onDragStart: ({ active }) =>
+      tx("Picked up {goal}.", { goal: goalName(active.id) }),
+    onDragOver: ({ active, over }) =>
+      over
+        ? tx("{goal} is over {target}.", {
+            goal: goalName(active.id),
+            target: goalName(over.id),
+          })
+        : tx("{goal} is no longer over a drop target.", {
+            goal: goalName(active.id),
+          }),
+    onDragEnd: ({ active, over }) =>
+      over
+        ? tx("Moved {goal} to {target}.", {
+            goal: goalName(active.id),
+            target: goalName(over.id),
+          })
+        : tx("Move cancelled for {goal}.", { goal: goalName(active.id) }),
+    onDragCancel: ({ active }) =>
+      tx("Move cancelled for {goal}.", { goal: goalName(active.id) }),
+  };
+  const handleGoalDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!arrangementActive || !over || active.id === over.id) return;
+    store.reorderGoal(String(active.id), String(over.id));
+  };
   const notificationSettings = store.notificationSettings;
   const notificationPermission: NotificationPermission | "unsupported" =
     typeof window === "undefined" || !("Notification" in window)
@@ -849,19 +1092,71 @@ function WorkspaceView() {
       </div>
     );
   };
-  const card = (g: Goal, quick = false) => {
+  const card = (
+    g: Goal,
+    quick = false,
+    arranging = false,
+    sortable?: SortableHandle,
+  ) => {
     const m = metrics(g, store.checkIns);
+    const position = store.goals.findIndex((goal) => goal.id === g.id);
+    const visiblePosition = visibleGoalIds.indexOf(g.id);
+    const previousVisibleId = visibleGoalIds[visiblePosition - 1];
+    const nextVisibleId = visibleGoalIds[visiblePosition + 1];
     return (
       <motion.article layout className="goal-card" key={g.id}>
         <div className="card-top">
-          <div className="goal-icon">
-            <Target size={21} />
+          <div className="goal-icon" style={appearanceStyle(g)}>
+            <GoalGlyph icon={g.icon} />
           </div>
-          <Chip
-            size="small"
-            label={healthText(language, m.health)}
-            className={m.health === "At Risk" ? "risk" : "health"}
-          />
+          {arranging ? (
+            <div className="reorder-controls">
+              <IconButton
+                ref={sortable?.setActivatorNodeRef}
+                type="button"
+                size="small"
+                className="drag-handle"
+                {...(sortable?.attributes ?? {})}
+                {...(sortable?.listeners ?? {})}
+                aria-label={tx("Drag to reorder")}
+                title={tx("Drag to reorder")}
+              >
+                <GripVertical size={18} />
+              </IconButton>
+              <span>
+                {position + 1} / {store.goals.length}
+              </span>
+              <IconButton
+                type="button"
+                size="small"
+                aria-label={tx("Move earlier")}
+                disabled={!previousVisibleId}
+                onClick={() =>
+                  previousVisibleId &&
+                  store.reorderGoal(g.id, previousVisibleId)
+                }
+              >
+                <ChevronLeft size={18} />
+              </IconButton>
+              <IconButton
+                type="button"
+                size="small"
+                aria-label={tx("Move later")}
+                disabled={!nextVisibleId}
+                onClick={() =>
+                  nextVisibleId && store.reorderGoal(g.id, nextVisibleId)
+                }
+              >
+                <ChevronRight size={18} />
+              </IconButton>
+            </div>
+          ) : (
+            <Chip
+              size="small"
+              label={healthText(language, m.health)}
+              className={m.health === "At Risk" ? "risk" : "health"}
+            />
+          )}
         </div>
         <Link href={`/goals/${g.id}`} className="goal-link">
           {g.name}
@@ -1016,7 +1311,6 @@ function WorkspaceView() {
             </span>
             target<span className="brand-light">tracking</span>
           </Link>
-          <div className="workspace-label">{tx("Personal workspace")}</div>
           <nav>
             {nav.map(([url, label, Icon]) => (
               <Link
@@ -1050,12 +1344,10 @@ function WorkspaceView() {
         <main>
           <header className="topbar">
             <span>
-              {tx("Personal workspace")} <span className="slash">/</span>{" "}
               {page === "detail"
                 ? tx("Goal detail")
                 : tx(nav.find((n) => n[0] === path)?.[1] || "Today")}
             </span>
-            <span className="avatar">M</span>
           </header>
           {!ready ? (
             <div className="empty">
@@ -1210,13 +1502,23 @@ function WorkspaceView() {
                             : "把想做的事，慢慢變成做到的事。"}
                       </p>
                     </div>
-                    <Button
-                      variant="contained"
-                      startIcon={<Plus size={18} />}
-                      onClick={() => setForm(null)}
-                    >
-                      {tx("新增目標")}
-                    </Button>
+                    <div className="heading-actions">
+                      <Button
+                        variant="outlined"
+                        startIcon={<ArrowUpDown size={17} />}
+                        disabled={!arrangingGoals && visibleGoals.length < 2}
+                        onClick={() => setArrangingGoals((value) => !value)}
+                      >
+                        {arrangingGoals ? tx("Done") : tx("Arrange")}
+                      </Button>
+                      <Button
+                        variant="contained"
+                        startIcon={<Plus size={18} />}
+                        onClick={() => setForm(null)}
+                      >
+                        {tx("新增目標")}
+                      </Button>
+                    </div>
                   </div>
                   <div className="filters">
                     <TextField
@@ -1250,22 +1552,46 @@ function WorkspaceView() {
                       ))}
                     </TextField>
                   </div>
-                  <div className="goal-grid">
-                    {ms
-                      .filter(
-                        ({ g, m }) =>
-                          g.name.toLowerCase().includes(search.toLowerCase()) &&
-                          (store.goalStatusFilter === "all" ||
-                            m.status === store.goalStatusFilter),
-                      )
-                      .map(({ g }) => card(g))}
-                  </div>
-                  {!ms.filter(
-                    ({ g, m }) =>
-                      g.name.toLowerCase().includes(search.toLowerCase()) &&
-                      (store.goalStatusFilter === "all" ||
-                        m.status === store.goalStatusFilter),
-                  ).length && (
+                  {arrangementActive && (
+                    <p className="arrange-note">
+                      {tx(
+                        "Drag cards with the handle or use the arrow buttons.",
+                      )}
+                    </p>
+                  )}
+                  <DndContext
+                    sensors={dragSensors}
+                    collisionDetection={closestCenter}
+                    accessibility={{
+                      announcements: dragAnnouncements,
+                      screenReaderInstructions: {
+                        draggable: tx(
+                          "Press space to pick up a goal. Use the arrow keys to move it, then press space to drop it.",
+                        ),
+                      },
+                    }}
+                    onDragEnd={handleGoalDragEnd}
+                  >
+                    <SortableContext
+                      items={visibleGoalIds}
+                      strategy={rectSortingStrategy}
+                    >
+                      <div className="goal-grid">
+                        {visibleGoals.map(({ g }) => (
+                          <SortableGoalCard
+                            id={g.id}
+                            disabled={!arrangementActive}
+                            key={g.id}
+                          >
+                            {(sortable) =>
+                              card(g, false, arrangementActive, sortable)
+                            }
+                          </SortableGoalCard>
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                  {!visibleGoals.length && (
                     <div className="empty">
                       {language === "en"
                         ? "No goals match. Try adding a goal or changing the filter."
@@ -1292,7 +1618,15 @@ function WorkspaceView() {
                               {statusText(language, m.status)} ·{" "}
                               {healthText(language, m.health)}
                             </div>
-                            <h1>{goal.name}</h1>
+                            <div className="goal-detail-title">
+                              <div
+                                className="goal-icon goal-icon-detail"
+                                style={appearanceStyle(goal)}
+                              >
+                                <GoalGlyph icon={goal.icon} size={25} />
+                              </div>
+                              <h1>{goal.name}</h1>
+                            </div>
                             <p>{goal.description}</p>
                           </div>
                           <div className="flex gap-2">

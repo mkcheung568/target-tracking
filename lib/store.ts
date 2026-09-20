@@ -22,6 +22,7 @@ type State = Backup & {
   storageError: string;
   replace: (b: Backup) => void;
   save: (g: Goal) => void;
+  reorderGoal: (activeId: string, targetId: string) => void;
   remove: (id: string) => void;
   check: (r: CheckIn) => void;
   redeem: (id: string) => void;
@@ -59,6 +60,16 @@ export const useStore = create<State>()(
             ? s.goals.map((x) => (x.id === g.id ? g : x))
             : [...s.goals, g],
         })),
+      reorderGoal: (activeId, targetId) =>
+        set((s) => {
+          const from = s.goals.findIndex((goal) => goal.id === activeId);
+          const to = s.goals.findIndex((goal) => goal.id === targetId);
+          if (from < 0 || to < 0 || from === to) return {};
+          const goals = [...s.goals];
+          const [moved] = goals.splice(from, 1);
+          goals.splice(to, 0, moved);
+          return { goals };
+        }),
       remove: (id) =>
         set((s) => ({
           goals: s.goals.filter((g) => g.id !== id),
