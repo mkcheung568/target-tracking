@@ -17,6 +17,9 @@ import {
   Snackbar,
   Switch,
   FormControlLabel,
+  IconButton,
+  InputAdornment,
+  Popover,
 } from "@mui/material";
 import {
   LayoutDashboard,
@@ -35,6 +38,7 @@ import {
   Download,
   Upload,
   Leaf,
+  Info,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -58,12 +62,13 @@ import {
   dates,
   metrics,
   scheduled,
+  scheduledDayCount,
   goalSchema,
   backupSchema,
   demo,
   scoreOf,
 } from "@/lib/domain";
-import { useStore } from "@/lib/store";
+import { GoalStatusFilter, useStore } from "@/lib/store";
 import { Language, t } from "@/lib/i18n";
 const theme = createTheme({
   palette: {
@@ -143,6 +148,21 @@ const validationText = (language: Language, message: string) => {
       "zh-Hant": "Weekly 請選一天；Custom 請至少選一天",
       "zh-Hans": "Weekly 请选一天；Custom 请至少选一天",
       en: "Choose one day for Weekly, or at least one for Custom",
+    },
+    日期範圍內沒有排程日: {
+      "zh-Hant": "日期範圍內沒有排程日",
+      "zh-Hans": "日期范围内没有排程日",
+      en: "This date range has no scheduled days",
+    },
+    請輸入有效目標分數: {
+      "zh-Hant": "請輸入有效目標分數",
+      "zh-Hans": "请输入有效目标分数",
+      en: "Enter a valid target score",
+    },
+    請輸入有效目標完成率: {
+      "zh-Hant": "請輸入有效目標完成率",
+      "zh-Hans": "请输入有效目标完成率",
+      en: "Enter a valid target completion rate",
     },
   };
   return translated[message]?.[language] ?? message;
@@ -274,8 +294,13 @@ function GoalForm({
   const records = useStore((s) => s.checkIns);
   const [error, setError] = useState(""),
     [closeConfirm, setCloseConfirm] = useState(false),
-    [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const unsavedRef = useRef(false);
+    [hasUnsavedChanges, setHasUnsavedChanges] = useState(false),
+    [info, setInfo] = useState<{
+      type: "score" | "rate";
+      anchor: HTMLElement;
+    } | null>(null);
+  const unsavedRef = useRef(false),
+    scheduleInitializedRef = useRef(false);
   const defaultValues = useMemo(
     () =>
       goal || {
@@ -283,11 +308,11 @@ function GoalForm({
         name: "",
         description: "",
         startDate: day(),
-        endDate: day(addDays(new Date(), 30)),
+        endDate: "",
         frequency: "daily" as const,
         days: [1],
-        targetScore: 20,
-        targetRate: 80,
+        targetScore: Number.NaN,
+        targetRate: 100,
         reward: "",
         status: "active" as const,
         redeemedAt: null,
@@ -303,8 +328,32 @@ function GoalForm({
     resolver: zodResolver(goalSchema),
     defaultValues,
   });
-  const frequency = useWatch({ control, name: "frequency" }),
-    selected = useWatch({ control, name: "days" }) ?? [];
+  const startDate = useWatch({ control, name: "startDate" }),
+    endDate = useWatch({ control, name: "endDate" }),
+    frequency = useWatch({ control, name: "frequency" }),
+    watchedDays = useWatch({ control, name: "days" });
+  const selected = useMemo(() => watchedDays ?? [], [watchedDays]);
+  const automaticTargetScore = useMemo(
+    () =>
+      scheduledDayCount({
+        startDate,
+        endDate,
+        frequency,
+        days: selected,
+      }),
+    [endDate, frequency, selected, startDate],
+  );
+  useEffect(() => {
+    if (!scheduleInitializedRef.current) {
+      scheduleInitializedRef.current = true;
+      return;
+    }
+    setValue(
+      "targetScore",
+      automaticTargetScore > 0 ? automaticTargetScore : Number.NaN,
+      { shouldDirty: true, shouldValidate: false },
+    );
+  }, [automaticTargetScore, setValue]);
   const markUnsaved = () => {
     unsavedRef.current = true;
     setHasUnsavedChanges(true);
@@ -316,7 +365,13 @@ function GoalForm({
       render={({ field }) => (
         <TextField
           {...field}
-          value={field.value ?? ""}
+          value={
+            type === "number" &&
+            typeof field.value === "number" &&
+            Number.isNaN(field.value)
+              ? ""
+              : (field.value ?? "")
+          }
           label={label}
           type={type}
           slotProps={{ inputLabel: { shrink: true } }}
@@ -324,7 +379,69 @@ function GoalForm({
           onChange={(e) => {
             markUnsaved();
             field.onChange(
-              type === "number" ? Number(e.target.value) : e.target.value,
+              type === "number"
+                ? e.target.value === ""
+                  ? Number.NaN
+                  : Number(e.target.value)
+                : e.target.value,
+            );
+          }}
+          error={!!errors[name]}
+          helperText={
+            validationText(language, String(errors[name]?.message ?? "")) ||
+            undefined
+          }
+        />
+      )}
+    />
+  );
+  const numberField = (
+    name: "targetScore" | "targetRate",
+    label: string,
+    infoType: "score" | "rate",
+  ) => (
+    <Controller
+      name={name}
+      control={control}
+      render={({ field }) => (
+        <TextField
+          {...field}
+          value={Number.isNaN(field.value) ? "" : field.value}
+          label={label}
+          type="number"
+          slotProps={{
+            inputLabel: { shrink: true },
+            htmlInput: {
+              min: 1,
+              max: name === "targetRate" ? 100 : 10000,
+            },
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    type="button"
+                    size="small"
+                    aria-label={
+                      infoType === "score"
+                        ? t(language, "目標分數說明")
+                        : t(language, "目標完成率說明")
+                    }
+                    onClick={(event) =>
+                      setInfo({ type: infoType, anchor: event.currentTarget })
+                    }
+                  >
+                    <Info size={17} />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
+          }}
+          onChange={(event) => {
+            markUnsaved();
+            field.onChange(
+              event.target.value === ""
+                ? Number.NaN
+                : Number(event.target.value),
             );
           }}
           error={!!errors[name]}
@@ -444,8 +561,8 @@ function GoalForm({
               </div>
             )}
             <div className="two">
-              {field("targetScore", tx("Target score"), "number")}
-              {field("targetRate", tx("目標完成率 %"), "number")}
+              {numberField("targetScore", tx("Target score"), "score")}
+              {numberField("targetRate", tx("目標完成率 %"), "rate")}
             </div>
             {field("reward", tx("完成後的小獎勵"))}
             <Controller
@@ -461,7 +578,10 @@ function GoalForm({
                     field.onChange(e);
                   }}
                 >
-                  {["draft", "active", "paused", "abandoned"].map((s) => (
+                  {(goal
+                    ? ["draft", "active", "paused", "abandoned"]
+                    : ["draft", "active"]
+                  ).map((s) => (
                     <MenuItem key={s} value={s}>
                       {statusText(language, s)}
                     </MenuItem>
@@ -472,6 +592,19 @@ function GoalForm({
             <small>
               {tx("分數與完成率均達標後自動完成。到期未達標則顯示已到期。")}
             </small>
+            <Popover
+              open={info !== null}
+              anchorEl={info?.anchor ?? null}
+              onClose={() => setInfo(null)}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+              <p className="metric-info">
+                {info?.type === "score"
+                  ? tx("目標分數解釋")
+                  : tx("目標完成率解釋")}
+              </p>
+            </Popover>
           </div>
         </DialogContent>
         <DialogActions>
@@ -532,7 +665,7 @@ function WorkspaceView() {
     [form, setForm] = useState<Goal | null | undefined>(),
     [range, setRange] = useState(7),
     [search, setSearch] = useState(""),
-    [filter, setFilter] = useState("all"),
+    [recordFilter, setRecordFilter] = useState("all"),
     [message, setMessage] = useState(""),
     [noteGoal, setNoteGoal] = useState<Goal | null>(null),
     [note, setNote] = useState(""),
@@ -866,7 +999,8 @@ function WorkspaceView() {
   );
   const visibleRecords = store.checkIns.filter(
     (r) =>
-      (!store.goals.some((g) => g.id === filter) || r.goalId === filter) &&
+      (!store.goals.some((g) => g.id === recordFilter) ||
+        r.goalId === recordFilter) &&
       (!search ||
         (store.goals.find((g) => g.id === r.goalId)?.name + " " + r.note)
           .toLowerCase()
@@ -1099,8 +1233,12 @@ function WorkspaceView() {
                     <TextField
                       select
                       label={tx("狀態")}
-                      value={filter}
-                      onChange={(e) => setFilter(e.target.value)}
+                      value={store.goalStatusFilter}
+                      onChange={(e) =>
+                        store.setGoalStatusFilter(
+                          e.target.value as GoalStatusFilter,
+                        )
+                      }
                     >
                       <MenuItem value="all">
                         {language === "en" ? "All" : "全部"}
@@ -1117,14 +1255,16 @@ function WorkspaceView() {
                       .filter(
                         ({ g, m }) =>
                           g.name.toLowerCase().includes(search.toLowerCase()) &&
-                          (filter === "all" || m.status === filter),
+                          (store.goalStatusFilter === "all" ||
+                            m.status === store.goalStatusFilter),
                       )
                       .map(({ g }) => card(g))}
                   </div>
                   {!ms.filter(
                     ({ g, m }) =>
                       g.name.toLowerCase().includes(search.toLowerCase()) &&
-                      (filter === "all" || m.status === filter),
+                      (store.goalStatusFilter === "all" ||
+                        m.status === store.goalStatusFilter),
                   ).length && (
                     <div className="empty">
                       {language === "en"
@@ -1346,11 +1486,11 @@ function WorkspaceView() {
                       select
                       label={tx("目標")}
                       value={
-                        store.goals.some((g) => g.id === filter)
-                          ? filter
+                        store.goals.some((g) => g.id === recordFilter)
+                          ? recordFilter
                           : "all"
                       }
-                      onChange={(e) => setFilter(e.target.value)}
+                      onChange={(e) => setRecordFilter(e.target.value)}
                     >
                       <MenuItem value="all">{tx("所有目標")}</MenuItem>
                       {store.goals.map((g) => (
@@ -1375,8 +1515,8 @@ function WorkspaceView() {
                     (() => {
                       const rs = store.checkIns.filter(
                         (r) =>
-                          (!store.goals.some((g) => g.id === filter) ||
-                            r.goalId === filter) &&
+                          (!store.goals.some((g) => g.id === recordFilter) ||
+                            r.goalId === recordFilter) &&
                           r.date >= day(addDays(new Date(), 1 - (range || 30))),
                       );
                       const c = rs.filter(
@@ -1501,7 +1641,7 @@ function WorkspaceView() {
                     >
                       <MenuItem value="zh-Hant">{tx("繁體中文")}</MenuItem>
                       <MenuItem value="zh-Hans">
-                        {t("zh-Hans", "簡體中文")}
+                        {tx("簡體中文")}
                       </MenuItem>
                       <MenuItem value="en">{tx("英文")}</MenuItem>
                     </TextField>

@@ -5,6 +5,7 @@ import {
   Goal,
   CheckIn,
   backupSchema,
+  goalStatusSchema,
   notificationSettingsSchema,
   NotificationSettings,
   day,
@@ -12,10 +13,12 @@ import {
   metrics,
 } from "./domain";
 import { Language } from "./i18n";
+export type GoalStatusFilter = "all" | Goal["status"];
 type State = Backup & {
   initialized: boolean;
   language: Language;
   notificationSettings: NotificationSettings;
+  goalStatusFilter: GoalStatusFilter;
   storageError: string;
   replace: (b: Backup) => void;
   save: (g: Goal) => void;
@@ -23,6 +26,7 @@ type State = Backup & {
   check: (r: CheckIn) => void;
   redeem: (id: string) => void;
   setLanguage: (language: Language) => void;
+  setGoalStatusFilter: (filter: GoalStatusFilter) => void;
   setNotificationSettings: (
     settings: Partial<NotificationSettings>,
   ) => void;
@@ -37,6 +41,7 @@ export const useStore = create<State>()(
       initialized: false,
       language: "zh-Hant",
       notificationSettings: notificationSettingsSchema.parse({}),
+      goalStatusFilter: "all",
       storageError: "",
       replace: (b) => {
         const parsed = backupSchema.parse(b);
@@ -84,6 +89,7 @@ export const useStore = create<State>()(
           ),
         })),
       setLanguage: (language) => set({ language }),
+      setGoalStatusFilter: (goalStatusFilter) => set({ goalStatusFilter }),
       setNotificationSettings: (settings) =>
         set((s) => ({
           notificationSettings: { ...s.notificationSettings, ...settings },
@@ -120,6 +126,7 @@ export const useStore = create<State>()(
         initialized: s.initialized,
         language: s.language,
         notificationSettings: s.notificationSettings,
+        goalStatusFilter: s.goalStatusFilter,
       }),
       merge: (saved, current) => {
         const s = saved as Partial<State>;
@@ -137,10 +144,16 @@ export const useStore = create<State>()(
           s.language === "en"
             ? s.language
             : current.language;
+        const goalStatusFilter =
+          s.goalStatusFilter === "all" ||
+          goalStatusSchema.safeParse(s.goalStatusFilter).success
+            ? (s.goalStatusFilter as GoalStatusFilter)
+            : current.goalStatusFilter;
         return {
           ...current,
           ...result.data,
           language,
+          goalStatusFilter,
           notificationSettings:
             result.data.notificationSettings ?? current.notificationSettings,
           initialized: true,

@@ -11,21 +11,6 @@ FROM base AS deps
 COPY package.json package-lock.json ./
 RUN npm ci
 
-FROM base AS development
-
-ENV NODE_ENV=development \
-    HOSTNAME=0.0.0.0 \
-    PORT=3005
-
-COPY --from=deps /app/node_modules ./node_modules
-COPY package.json package-lock.json ./
-COPY . .
-RUN mkdir -p public
-
-EXPOSE 3005
-
-CMD ["npm", "run", "dev"]
-
 FROM base AS builder
 
 ENV NODE_ENV=production \

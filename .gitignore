@@ -16,3 +16,4 @@ yarn-error.log*
 .DS_Store
 .vscode/
 .idea/
+/docker-compose.dev.yml
