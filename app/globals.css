@@ -90,13 +90,8 @@ a:focus-visible,
 .brand-light {
   font-weight: 400;
 }
-.workspace-label {
-  font-size: 10px;
-  letter-spacing: 1.8px;
-  color: #969ab0;
-  margin: 48px 12px 20px;
-}
 .sidebar nav {
+  margin-top: 40px;
   display: grid;
   gap: 9px;
 }
@@ -141,25 +136,10 @@ main {
   padding: 0 44px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   background: #ffffff80;
   font-size: 13px;
   color: #81869a;
-}
-.slash {
-  padding: 0 16px;
-  color: #c5c8d4;
-}
-.avatar {
-  background: #e9eafb;
-  border: 3px solid #fff;
-  border-radius: 50%;
-  height: 35px;
-  width: 35px;
-  display: grid;
-  place-items: center;
-  color: var(--accent);
-  font-weight: 700;
 }
 .content {
   max-width: 1440px;
@@ -177,6 +157,11 @@ main {
   color: var(--muted);
   font-size: 14px;
   margin-top: 8px;
+}
+.heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 .eyebrow {
   font-size: 11px;
@@ -248,6 +233,18 @@ main {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
+.sortable-goal {
+  height: 100%;
+  min-width: 0;
+}
+.sortable-goal .goal-card {
+  height: 100%;
+}
+.sortable-goal.is-dragging .goal-card {
+  border-color: #b7b9f4;
+  box-shadow: 0 18px 42px #272d5326;
+  opacity: 0.94;
+}
 .goal-card {
   background: #fff;
   padding: 24px;
@@ -266,14 +263,61 @@ main {
   margin-bottom: 22px;
   gap: 6px;
 }
+.reorder-controls {
+  align-items: center;
+  background: #f6f7fb;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: flex;
+  gap: 2px;
+  padding: 3px 4px 3px 9px;
+}
+.reorder-controls > span {
+  color: var(--muted);
+  font-size: 12px;
+  margin-right: 2px;
+  min-width: 34px;
+  text-align: center;
+}
+.reorder-controls .MuiIconButton-root {
+  border-radius: 7px;
+  height: 30px;
+  width: 30px;
+}
+.reorder-controls .MuiIconButton-root:not(:disabled):hover {
+  background: #e9eaff;
+  color: var(--accent);
+}
+.reorder-controls .drag-handle {
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+}
+.reorder-controls .drag-handle:active {
+  cursor: grabbing;
+}
 .goal-icon {
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: #eef0ff;
-  color: #7574d8;
+  background: var(--goal-tint, #eef0ff);
+  color: var(--goal-color, #7574d8);
   display: grid;
   place-items: center;
+}
+.goal-detail-title {
+  align-items: center;
+  display: flex;
+  gap: 13px;
+  margin-top: 10px;
+}
+.goal-detail-title h1 {
+  margin: 0;
+}
+.goal-icon-detail {
+  flex: 0 0 auto;
+  height: 48px;
+  width: 48px;
 }
 .health.MuiChip-root {
   background: #f0f6f4;
@@ -536,6 +580,57 @@ footer {
   padding: 5px;
   flex: 1;
 }
+.appearance-picker {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+.appearance-picker > div {
+  display: grid;
+  gap: 8px;
+}
+.appearance-label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+.appearance-picker > .appearance-label {
+  color: var(--ink);
+  font-size: 14px;
+}
+.icon-choice-grid,
+.color-choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.appearance-option.MuiIconButton-root {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: #747991;
+  height: 38px;
+  width: 38px;
+}
+.appearance-option.MuiIconButton-root.selected {
+  background: #eeefff;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.color-choice {
+  background: var(--swatch-color);
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  height: 27px;
+  padding: 0;
+  width: 27px;
+}
+.color-choice.selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px var(--swatch-color);
+}
 .error {
   color: #e44868;
   font-size: 13px;
@@ -553,6 +648,11 @@ footer {
   gap: 16px;
   max-width: 640px;
   margin-bottom: 24px;
+}
+.arrange-note {
+  color: var(--muted);
+  font-size: 13px;
+  margin: -12px 0 20px;
 }
 .empty {
   padding: 60px 20px;
@@ -823,6 +923,13 @@ footer {
     font-size: 25px;
   }
   .page-heading > .MuiButton-root {
+    font-size: 12px;
+  }
+  .heading-actions {
+    width: 100%;
+  }
+  .heading-actions .MuiButton-root {
+    flex: 1;
     font-size: 12px;
   }
   .stats {

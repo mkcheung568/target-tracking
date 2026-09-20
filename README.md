@@ -27,6 +27,7 @@ Many goals remain as a task-list item or a good intention. The missing piece is 
 - See momentum through Streak, Best Streak, and seven/30-day trends.
 - Use Ahead, On Track, Slightly Behind, and At Risk indicators to decide when to adjust.
 - Keep motivation and completion history through locked, unlocked, and redeemed reward states.
+- Arrange goal cards with drag and drop or keyboard controls, including within filtered results.
 - Export and import JSON backups while keeping ownership of local data.
 
 ## Main views
@@ -78,6 +79,7 @@ Choose Traditional Chinese, Simplified Chinese, or English; export or import JSO
 - Zustand with `persist` and browser localStorage
 - Recharts for trends and summaries
 - Framer Motion for the liquid progress animation
+- dnd-kit for accessible goal-card reordering
 - date-fns for date calculations
 - Zod + React Hook Form for validation and forms
 

@@ -11,31 +11,34 @@
     "test": "node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@emotion/react": "latest",
+    "@emotion/styled": "latest",
+    "@hookform/resolvers": "latest",
+    "@mui/material": "latest",
+    "@mui/material-nextjs": "latest",
+    "date-fns": "latest",
+    "framer-motion": "latest",
+    "lucide-react": "latest",
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "@mui/material": "latest",
-    "@mui/material-nextjs": "latest",
-    "@emotion/react": "latest",
-    "@emotion/styled": "latest",
-    "zustand": "latest",
-    "recharts": "latest",
-    "framer-motion": "latest",
-    "date-fns": "latest",
-    "zod": "latest",
     "react-hook-form": "latest",
-    "@hookform/resolvers": "latest",
-    "lucide-react": "latest"
+    "recharts": "latest",
+    "zod": "latest",
+    "zustand": "latest"
   },
   "devDependencies": {
-    "typescript": "latest",
+    "@tailwindcss/postcss": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "tailwindcss": "latest",
-    "@tailwindcss/postcss": "latest",
     "eslint": "latest",
     "eslint-config-next": "latest",
-    "tsx": "latest"
+    "tailwindcss": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
   }
 }
