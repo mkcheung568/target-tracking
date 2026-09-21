@@ -48,9 +48,26 @@ test("source-of-truth score, skipped denominator, missed days and streak", () =>
   );
   assert.equal(m.score, 1);
   assert.equal(Math.round(m.rate), 67);
+  assert.equal(m.progress, 50);
   assert.equal(m.streak, 0);
   assert.equal(m.best, 2);
   assert.equal(m.skipped, 1);
+});
+test("score progress is clamped from zero through the target", () => {
+  assert.equal(metrics(g, []).progress, 0);
+  assert.equal(metrics(g, [r("2026-01-01", "failed")]).progress, 0);
+  assert.equal(
+    metrics(g, [r("2026-01-01", "completed"), r("2026-01-02", "completed")])
+      .progress,
+    100,
+  );
+  assert.equal(
+    metrics(
+      { ...g, targetScore: 1 },
+      [r("2026-01-01", "completed"), r("2026-01-02", "completed")],
+    ).progress,
+    100,
+  );
 });
 test("unrecorded today retains streak; tomorrow missing breaks it", () => {
   const rs = [r("2026-01-01", "completed"), r("2026-01-02", "completed")];

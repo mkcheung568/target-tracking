@@ -283,6 +283,35 @@ function Liquid({
     </div>
   );
 }
+const fireworkParticles = [
+  [0, -190, 0],
+  [58, -178, 18],
+  [112, -154, 36],
+  [158, -112, 54],
+  [188, -58, 72],
+  [198, 0, 90],
+  [188, 58, 108],
+  [158, 112, 126],
+  [112, 154, 144],
+  [58, 178, 162],
+  [0, 190, 180],
+  [-58, 178, 198],
+  [-112, 154, 216],
+  [-158, 112, 234],
+  [-188, 58, 252],
+  [-198, 0, 270],
+  [-188, -58, 288],
+  [-158, -112, 306],
+  [-112, -154, 324],
+  [-58, -178, 342],
+] as const;
+const fireworkBursts = [
+  { x: "16%", y: "32%", hue: 42, delay: 0 },
+  { x: "48%", y: "24%", hue: 278, delay: 0.22 },
+  { x: "82%", y: "34%", hue: 176, delay: 0.44 },
+  { x: "33%", y: "57%", hue: 342, delay: 0.66 },
+  { x: "69%", y: "59%", hue: 210, delay: 0.88 },
+] as const;
 function Stats({ items }: { items: [string, string, string?][] }) {
   return (
     <div className="stats">
@@ -864,6 +893,8 @@ function WorkspaceView() {
     [recordFilter, setRecordFilter] = useState("all"),
     [arrangingGoals, setArrangingGoals] = useState(false),
     [message, setMessage] = useState(""),
+    [celebratingGoalId, setCelebratingGoalId] = useState<string | null>(null),
+    [celebrationMessage, setCelebrationMessage] = useState(""),
     [noteGoal, setNoteGoal] = useState<Goal | null>(null),
     [note, setNote] = useState(""),
     [confirm, setConfirm] = useState<{ text: string; run: () => void } | null>(
@@ -881,6 +912,7 @@ function WorkspaceView() {
     }),
   );
   const [, tick] = useState(0);
+  const celebrationTimer = useRef<number | null>(null);
   useEffect(() => {
     let live = true;
     Promise.resolve(useStore.persist.rehydrate()).then(() => {
@@ -893,6 +925,13 @@ function WorkspaceView() {
       clearInterval(timer);
     };
   }, []);
+  useEffect(
+    () => () => {
+      if (celebrationTimer.current !== null)
+        window.clearTimeout(celebrationTimer.current);
+    },
+    [],
+  );
   const today = day(),
     detailId = path.startsWith("/goals/")
       ? decodeURIComponent(path.split("/")[2])
@@ -1034,13 +1073,37 @@ function WorkspaceView() {
     const old = store.checkIns.find(
       (r) => r.goalId === g.id && r.date === today,
     );
-    store.check({
+    const record = {
       goalId: g.id,
       date: today,
       result,
       note: old?.note || "",
       updatedAt: new Date().toISOString(),
-    });
+    } satisfies CheckIn;
+    const nextCheckIns = [
+      ...store.checkIns.filter(
+        (candidate) =>
+          !(candidate.goalId === record.goalId && candidate.date === record.date),
+      ),
+      record,
+    ];
+    const becameAchieved =
+      !metrics(g, store.checkIns).achieved && metrics(g, nextCheckIns).achieved;
+    store.check(record);
+    if (becameAchieved) {
+      const congratulations = tx("恭喜！「{goal}」已完成目標", { goal: g.name });
+      setCelebratingGoalId(g.id);
+      setCelebrationMessage(congratulations);
+      setMessage(congratulations);
+      if (celebrationTimer.current !== null)
+        window.clearTimeout(celebrationTimer.current);
+      celebrationTimer.current = window.setTimeout(() => {
+        setCelebratingGoalId(null);
+        setCelebrationMessage("");
+        celebrationTimer.current = null;
+      }, 3000);
+      return;
+    }
     setMessage(old ? tx("已更新今天的打卡") : tx("已記錄，今天又前進了一步"));
   };
   const actions = (g: Goal) => {
@@ -1172,11 +1235,17 @@ function WorkspaceView() {
             </strong>
           </div>
           <div>
-            <small>{tx("完成率")}</small>
+            <small>{tx("目標進度")}</small>
             <strong>
-              {Math.round(m.rate)}
+              {Math.round(m.progress)}
               <em>%</em>
             </strong>
+            <span className="metric-quality">
+              {tx("品質 {rate}%／目標 {target}%", {
+                rate: Math.round(m.rate),
+                target: g.targetRate,
+              })}
+            </span>
           </div>
           <div>
             <small>{tx("Streak")}</small>
@@ -2330,6 +2399,44 @@ function WorkspaceView() {
         onClose={() => setMessage("")}
         message={message}
       />
+      {celebratingGoalId && (
+        <div className="celebration-overlay" aria-hidden="true">
+          {fireworkBursts.map((burst) => (
+            <span
+              className="firework"
+              key={`${burst.x}-${burst.y}`}
+              style={
+                {
+                  "--firework-x": burst.x,
+                  "--firework-y": burst.y,
+                  "--firework-delay": `${burst.delay}s`,
+                  "--firework-hue": burst.hue,
+                } as CSSProperties
+              }
+            >
+              <b />
+              {fireworkParticles.map(([x, y, angle], particleIndex) => (
+                <i
+                  key={particleIndex}
+                  style={
+                    {
+                      "--particle-x": `${x}px`,
+                      "--particle-y": `${y}px`,
+                      "--particle-angle": `${angle}deg`,
+                      "--particle-hue": burst.hue + particleIndex * 11,
+                      "--particle-delay": `${(particleIndex % 3) * 0.018}s`,
+                    } as CSSProperties
+                  }
+                />
+              ))}
+            </span>
+          ))}
+          <strong className="celebration-message">{celebrationMessage}</strong>
+        </div>
+      )}
+      <div className="sr-only" role="status" aria-live="polite">
+        {celebrationMessage}
+      </div>
     </ThemeProvider>
   );
 }

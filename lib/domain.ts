@@ -179,6 +179,7 @@ export function metrics(g: Goal, all: CheckIn[], today = day()) {
     skipped = records.filter((r) => r.result === "skipped").length;
   const score = completed - failed,
     rate = completed + failed ? (completed / (completed + failed)) * 100 : 0;
+  const progress = Math.max(0, Math.min(100, (score / g.targetScore) * 100));
   const time = Math.max(
     0,
     Math.min(
@@ -225,6 +226,7 @@ export function metrics(g: Goal, all: CheckIn[], today = day()) {
     skipped,
     score,
     rate,
+    progress,
     time,
     streak,
     best,
