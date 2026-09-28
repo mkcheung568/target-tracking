@@ -756,6 +756,43 @@ copy.en = {
   已完成狀態: "Completed",
 };
 
+Object.assign(copy["zh-Hant"], {
+  "補打卡": "補打卡",
+  "可補登過去排程日，或修改既有結果與備註。": "可補登過去排程日，或修改既有結果與備註。",
+  "打卡日期": "打卡日期",
+  "打卡結果": "打卡結果",
+  "請選擇目標期間內的過去排程日": "請選擇目標期間內的過去排程日",
+  "備註最多 2000 字": "備註最多 2000 字",
+  "無法儲存打卡，請確認目標狀態與日期。": "無法儲存打卡，請確認目標狀態與日期。",
+  "儲存打卡": "儲存打卡",
+  "已儲存歷史打卡": "已儲存歷史打卡",
+  "過去未記錄的排程日會自動略過，仍可補打卡修改；今天跨日後才處理。": "過去未記錄的排程日會自動略過，仍可補打卡修改；今天跨日後才處理。"
+});
+Object.assign(copy["zh-Hans"], {
+  "補打卡": "补打卡",
+  "可補登過去排程日，或修改既有結果與備註。": "可补登过去排程日，或修改已有结果与备注。",
+  "打卡日期": "打卡日期",
+  "打卡結果": "打卡结果",
+  "請選擇目標期間內的過去排程日": "请选择目标期间内的过去排程日",
+  "備註最多 2000 字": "备注最多 2000 字",
+  "無法儲存打卡，請確認目標狀態與日期。": "无法保存打卡，请确认目标状态与日期。",
+  "儲存打卡": "保存打卡",
+  "已儲存歷史打卡": "已保存历史打卡",
+  "過去未記錄的排程日會自動略過，仍可補打卡修改；今天跨日後才處理。": "过去未记录的排程日会自动跳过，仍可补打卡修改；今天跨日后才处理。"
+});
+Object.assign(copy["en"], {
+  "補打卡": "Backfill check-in",
+  "可補登過去排程日，或修改既有結果與備註。": "Record a past scheduled day or edit its result and note.",
+  "打卡日期": "Check-in date",
+  "打卡結果": "Check-in result",
+  "請選擇目標期間內的過去排程日": "Choose a past scheduled day within the goal period.",
+  "備註最多 2000 字": "Notes can contain up to 2,000 characters.",
+  "無法儲存打卡，請確認目標狀態與日期。": "Unable to save. Check the goal status and date.",
+  "儲存打卡": "Save check-in",
+  "已儲存歷史打卡": "Past check-in saved",
+  "過去未記錄的排程日會自動略過，仍可補打卡修改；今天跨日後才處理。": "Unrecorded past scheduled days are automatically skipped and can be edited. Today is processed after midnight."
+});
+
 export function t(
   language: Language,
   key: string,

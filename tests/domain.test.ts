@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   metrics,
+  canBackfill,
+  fillMissedCheckIns,
   backupSchema,
   goalSchema,
   Goal,
@@ -210,4 +212,80 @@ test("store remembers the goal status filter", () => {
   useStore.getState().setGoalStatusFilter("active");
   assert.equal(useStore.getState().goalStatusFilter, "active");
   useStore.getState().setGoalStatusFilter("all");
+});
+
+
+test("historical eligibility respects status, dates and schedule", () => {
+  for (const status of ["active", "completed", "expired"] as const)
+    assert.equal(canBackfill({ ...g, status }, "2026-01-01", "2026-01-11"), true);
+  for (const status of ["draft", "paused", "abandoned"] as const)
+    assert.equal(canBackfill({ ...g, status }, "2026-01-01", "2026-01-11"), false);
+  for (const d of ["2025-12-31", "2026-01-11", "2026-02-30", "bad"])
+    assert.equal(canBackfill(g, d, "2026-01-11"), false);
+  assert.equal(canBackfill(g, "2026-01-02", "2026-01-02"), false);
+  assert.equal(canBackfill({ ...g, frequency: "weekly", days: [4] }, "2026-01-02", "2026-01-11"), false);
+});
+
+test("automatic skips catch up through yesterday, preserve records and are idempotent", () => {
+  const original = { ...r("2026-01-01", "failed"), note: "Keep this" };
+  const before = fillMissedCheckIns([g], [original], "2026-01-03");
+  assert.equal(before.length, 2);
+  assert.deepEqual(before[0], original);
+  assert.equal(before[1].result, "skipped");
+  assert.equal(before[1].date, "2026-01-02");
+  assert.equal(fillMissedCheckIns([g], before, "2026-01-03"), before);
+  const after = fillMissedCheckIns([g], before, "2026-01-20");
+  assert.equal(after.length, 10);
+  assert.equal(after.at(-1)?.date, g.endDate);
+  assert.equal(metrics(g, before).score, metrics(g, after).score);
+  assert.equal(metrics(g, before).rate, metrics(g, after).rate);
+  assert.equal(fillMissedCheckIns([g], [], "2025-12-31").length, 0);
+});
+
+test("automatic skips respect all statuses and weekly/custom schedules", () => {
+  for (const status of ["draft", "paused", "abandoned"] as const)
+    assert.equal(fillMissedCheckIns([{ ...g, status }], [], "2026-01-11").length, 0);
+  for (const status of ["active", "completed", "expired"] as const)
+    assert.equal(fillMissedCheckIns([{ ...g, status }], [], "2026-01-11").length, 10);
+  assert.deepEqual(fillMissedCheckIns([{ ...g, frequency: "weekly", days: [4] }], [], "2026-01-11").map((r) => r.date), ["2026-01-01", "2026-01-08"]);
+  assert.equal(fillMissedCheckIns([{ ...g, frequency: "custom", days: [0, 6] }], [], "2026-01-11").length, 3);
+});
+
+test("expired goal backfill unlocks reward and replaces a skip without duplicates", () => {
+  const goal = { ...g, endDate: "2026-01-03", targetScore: 3, targetRate: 100 };
+  useStore.getState().replace({ version: 1, goals: [goal], checkIns: [r("2026-01-01", "completed"), r("2026-01-02", "completed")] });
+  assert.equal(metrics(goal, useStore.getState().checkIns).score, 2);
+  assert.equal(useStore.getState().checkIns[2].result, "skipped");
+  assert.equal(useStore.getState().check({ ...r("2026-01-03", "completed"), note: "Backfilled" }), true);
+  assert.equal(useStore.getState().checkIns.length, 3);
+  const m = metrics(goal, useStore.getState().checkIns);
+  assert.equal(m.score, 3);
+  assert.equal(m.rate, 100);
+  assert.equal(m.best, 3);
+  assert.equal(m.rewardStatus, "unlocked");
+  useStore.getState().redeem(goal.id);
+  assert.equal(useStore.getState().check(r("2026-01-03", "failed")), true);
+  assert.equal(metrics(useStore.getState().goals[0], useStore.getState().checkIns).rewardStatus, "redeemed");
+  assert.equal(useStore.getState().check(r("2026-01-04", "completed")), false);
+  assert.equal(useStore.getState().check({ ...r("2026-01-01", "completed"), note: "x".repeat(2001) }), false);
+  assert.equal(useStore.getState().check(r("2099-01-01", "completed")), false);
+  assert.equal(useStore.getState().check({ ...r("2026-01-01", "completed"), goalId: "missing" }), false);
+  const backup = backupSchema.parse({ version: 1, goals: useStore.getState().goals, checkIns: useStore.getState().checkIns });
+  useStore.getState().replace(JSON.parse(JSON.stringify(backup)));
+  assert.deepEqual(useStore.getState().checkIns, backup.checkIns);
+});
+
+test("store rejects historical writes to excluded statuses and reconciles after resume", () => {
+  for (const status of ["draft", "paused", "abandoned"] as const) {
+    useStore.getState().replace({ version: 1, goals: [{ ...g, status }], checkIns: [r("2026-01-01", "completed")] });
+    assert.equal(useStore.getState().check(r("2026-01-01", "failed")), false);
+    assert.equal(useStore.getState().check(r("2026-01-02", "completed")), false);
+    useStore.getState().reconcile();
+    assert.equal(useStore.getState().checkIns.length, 1);
+  }
+  useStore.getState().save(g);
+  assert.equal(useStore.getState().checkIns.length, 10);
+  const records = useStore.getState().checkIns;
+  useStore.getState().reconcile();
+  assert.equal(useStore.getState().checkIns, records);
 });

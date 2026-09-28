@@ -17,3 +17,4 @@ yarn-error.log*
 .vscode/
 .idea/
 /docker-compose.dev.yml
+/scripts/target-tracking-docker-menu.sh

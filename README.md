@@ -67,8 +67,8 @@ Choose Traditional Chinese, Simplified Chinese, or English; export or import JSO
 ## Core rules
 
 - `Completed` adds `+1`, `Failed` subtracts `-1`, and `Skipped` contributes `0`.
-- A missing check-in remains `No Record`; it is not silently treated as a failure.
-- One goal can have only one check-in per date, while today's result remains editable.
+- Today remains `No Record` until recorded. Past unrecorded scheduled days automatically become `skipped` for active, completed, and expired goals, including existing history. Catch-up runs when opening or returning to the app and while the page remains open; a closed browser catches up on the next visit. Dates use the device’s local timezone.
+- One goal can have only one check-in per date. Today's result remains editable; the Goal Detail calendar and Backfill check-in dialog let you edit past scheduled dates, results, and notes across the full goal period, including expired goals. Draft, paused, and abandoned goals do not accept historical edits or automatic skips. Automatic skips can be replaced manually; skipped days contribute zero points and do not enter the Completion Rate denominator.
 - Completion Rate = completed / (completed + failed); skipped and unrecorded days are excluded.
 - Check-ins are the source of truth. Net Score, Completion Rate, Streak, and other metrics are derived at runtime.
 

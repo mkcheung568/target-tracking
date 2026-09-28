@@ -95,6 +95,8 @@ import { addDays, format, parseISO } from "date-fns";
 import {
   Goal,
   CheckIn,
+  checkSchema,
+  canBackfill,
   day,
   dates,
   metrics,
@@ -877,6 +879,57 @@ function SortableGoalCard({
   );
 }
 
+function BackfillDialog({ goal, initialDate, records, language, onClose, onSave }: {
+  goal: Goal; initialDate: string; records: CheckIn[]; language: Language;
+  onClose: () => void; onSave: (record: CheckIn) => boolean;
+}) {
+  const tx = (key: string) => t(language, key);
+  const [saveError, setSaveError] = useState(false);
+  const valuesFor = (date: string): CheckIn => ({
+    goalId: goal.id, date, result: "skipped", note: "",
+    ...records.find((r) => r.goalId === goal.id && r.date === date),
+    updatedAt: new Date().toISOString(),
+  });
+  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<CheckIn>({
+    resolver: zodResolver(checkSchema.refine((r) => canBackfill(goal, r.date), { path: ["date"] })),
+    defaultValues: valuesFor(initialDate),
+  });
+  return <Dialog open onClose={onClose} fullWidth maxWidth="sm" aria-labelledby="backfill-title">
+    <form onSubmit={handleSubmit((record) => {
+      if (onSave({ ...record, updatedAt: new Date().toISOString() })) onClose();
+      else setSaveError(true);
+    })}>
+      <DialogTitle id="backfill-title">{tx("補打卡")}</DialogTitle>
+      <DialogContent>
+        <p className="muted">{tx("可補登過去排程日，或修改既有結果與備註。")}</p>
+        <Controller name="date" control={control} render={({ field }) =>
+          <TextField {...field} type="date" label={tx("打卡日期")} fullWidth margin="normal"
+            onChange={(event) => { reset(valuesFor(event.target.value)); setSaveError(false); }}
+            error={!!errors.date} helperText={errors.date ? tx("請選擇目標期間內的過去排程日") : " "}
+            slotProps={{ inputLabel: { shrink: true }, htmlInput: {
+              min: goal.startDate,
+              max: goal.endDate < day() ? goal.endDate : day(addDays(new Date(), -1)),
+            } }} />
+        } />
+        <Controller name="result" control={control} render={({ field }) =>
+          <TextField {...field} select label={tx("打卡結果")} fullWidth margin="normal">
+            {(["completed", "failed", "skipped"] as const).map((result) =>
+              <MenuItem key={result} value={result}>{resultText(language, result)}</MenuItem>)}
+          </TextField>
+        } />
+        <TextField {...register("note")} label={tx("備註")} multiline rows={4} fullWidth margin="normal"
+          error={!!errors.note} helperText={errors.note ? tx("備註最多 2000 字") : " "}
+          slotProps={{ htmlInput: { maxLength: 2000 } }} />
+        {saveError && <Alert severity="error">{tx("無法儲存打卡，請確認目標狀態與日期。")}</Alert>}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{tx("取消")}</Button>
+        <Button type="submit" variant="contained">{tx("儲存打卡")}</Button>
+      </DialogActions>
+    </form>
+  </Dialog>;
+}
+
 export default function Workspace() {
   const path = usePathname();
   return <WorkspaceView key={path} />;
@@ -886,6 +939,7 @@ function WorkspaceView() {
   const language = store.language;
   const tx = (key: string, values?: Record<string, string | number>) =>
     t(language, key, values);
+  const [backfill, setBackfill] = useState<{ goalId: string; date: string } | null>(null);
   const [ready, setReady] = useState(false),
     [form, setForm] = useState<Goal | null | undefined>(),
     [range, setRange] = useState(7),
@@ -917,12 +971,21 @@ function WorkspaceView() {
     let live = true;
     Promise.resolve(useStore.persist.rehydrate()).then(() => {
       if (!useStore.getState().initialized) useStore.getState().replace(demo());
+      useStore.getState().reconcile();
       if (live) setReady(true);
     });
-    const timer = setInterval(() => tick((x) => x + 1), 30000);
+    const refresh = () => {
+      useStore.getState().reconcile();
+      tick((x) => x + 1);
+    };
+    const timer = setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
     return () => {
       live = false;
       clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
     };
   }, []);
   useEffect(
@@ -1069,17 +1132,8 @@ function WorkspaceView() {
     });
     setMessage(tx("通知已開啟"));
   };
-  const check = (g: Goal, result: CheckIn["result"]) => {
-    const old = store.checkIns.find(
-      (r) => r.goalId === g.id && r.date === today,
-    );
-    const record = {
-      goalId: g.id,
-      date: today,
-      result,
-      note: old?.note || "",
-      updatedAt: new Date().toISOString(),
-    } satisfies CheckIn;
+  const saveCheck = (g: Goal, record: CheckIn) => {
+    const old = store.checkIns.find((r) => r.goalId === g.id && r.date === record.date);
     const nextCheckIns = [
       ...store.checkIns.filter(
         (candidate) =>
@@ -1089,7 +1143,7 @@ function WorkspaceView() {
     ];
     const becameAchieved =
       !metrics(g, store.checkIns).achieved && metrics(g, nextCheckIns).achieved;
-    store.check(record);
+    if (!store.check(record)) return false;
     if (becameAchieved) {
       const congratulations = tx("恭喜！「{goal}」已完成目標", { goal: g.name });
       setCelebratingGoalId(g.id);
@@ -1102,10 +1156,16 @@ function WorkspaceView() {
         setCelebrationMessage("");
         celebrationTimer.current = null;
       }, 3000);
-      return;
+      return true;
     }
-    setMessage(old ? tx("已更新今天的打卡") : tx("已記錄，今天又前進了一步"));
+    setMessage(record.date < day() ? tx("已儲存歷史打卡") : old ? tx("已更新今天的打卡") : tx("已記錄，今天又前進了一步"));
+    return true;
   };
+  const check = (g: Goal, result: CheckIn["result"]) => saveCheck(g, {
+    goalId: g.id, date: day(), result,
+    note: store.checkIns.find((r) => r.goalId === g.id && r.date === day())?.note || "",
+    updatedAt: new Date().toISOString(),
+  });
   const actions = (g: Goal) => {
     const current = store.checkIns.find(
       (r) => r.goalId === g.id && r.date === today,
@@ -1820,7 +1880,15 @@ function WorkspaceView() {
                           />
                         </section>
                         <section className="panel">
-                          <h2>{tx("打卡日曆 · 最近 30 天")}</h2>
+                          <div className="section-title">
+                            <h2>{tx("打卡日曆 · 最近 30 天")}</h2>
+                            {dates(goal.startDate, goal.endDate).some((d) => canBackfill(goal, d, today)) &&
+                              <Button variant="outlined" onClick={() => {
+                                const eligible = dates(goal.startDate, goal.endDate).filter((d) => canBackfill(goal, d, today));
+                                setBackfill({ goalId: goal.id, date: eligible[eligible.length - 1] });
+                              }}>{tx("補打卡")}</Button>}
+                          </div>
+                          <p className="muted">{tx("過去未記錄的排程日會自動略過，仍可補打卡修改；今天跨日後才處理。")}</p>
                           <p className="muted">
                             {tx(
                               "綠：完成 · 紅：未完成 · 黃：略過 · 淺灰：No Record · 斜線：未排程",
@@ -1831,9 +1899,12 @@ function WorkspaceView() {
                               (d) => {
                                 const r = rs.find((r) => r.date === d);
                                 return (
-                                  <div
+                                  <button
+                                    type="button"
                                     key={d}
-                                    tabIndex={0}
+                                    disabled={!canBackfill(goal, d, today)}
+                                    onClick={() => setBackfill({ goalId: goal.id, date: d })}
+                                    aria-label={`${d} · ${r ? resultText(language, r.result) : scheduled(goal, d) ? tx("No Record") : tx("未排程")}`}
                                     title={`${d} · ${r ? resultText(language, r.result) : scheduled(goal, d) ? tx("No Record") : tx("未排程")}${r?.note ? " · " + r.note : ""}`}
                                     className={`heat ${r?.result || (!scheduled(goal, d) ? "unscheduled" : "")}`}
                                   >
@@ -1847,7 +1918,7 @@ function WorkspaceView() {
                                             : "−"
                                         : "·"}
                                     </span>
-                                  </div>
+                                  </button>
                                 );
                               },
                             )}
@@ -2393,6 +2464,15 @@ function WorkspaceView() {
           </Button>
         </DialogActions>
       </Dialog>
+      {backfill && store.goals.find((g) => g.id === backfill.goalId) && <BackfillDialog
+        goal={store.goals.find((g) => g.id === backfill.goalId)!}
+        initialDate={backfill.date} records={store.checkIns} language={language}
+        onClose={() => setBackfill(null)}
+        onSave={(record) => {
+          const currentGoal = useStore.getState().goals.find((g) => g.id === record.goalId);
+          return currentGoal ? saveCheck(currentGoal, record) : false;
+        }}
+      />}
       <Snackbar
         open={!!message}
         autoHideDuration={4500}

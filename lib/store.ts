@@ -11,6 +11,10 @@ import {
   day,
   scheduled,
   metrics,
+  checkSchema,
+  goalSchema,
+  canBackfill,
+  fillMissedCheckIns,
 } from "./domain";
 import { Language } from "./i18n";
 export type GoalStatusFilter = "all" | Goal["status"];
@@ -24,7 +28,8 @@ type State = Backup & {
   save: (g: Goal) => void;
   reorderGoal: (activeId: string, targetId: string) => void;
   remove: (id: string) => void;
-  check: (r: CheckIn) => void;
+  check: (r: CheckIn) => boolean;
+  reconcile: () => void;
   redeem: (id: string) => void;
   setLanguage: (language: Language) => void;
   setGoalStatusFilter: (filter: GoalStatusFilter) => void;
@@ -48,18 +53,28 @@ export const useStore = create<State>()(
         const parsed = backupSchema.parse(b);
         set({
           ...parsed,
+          checkIns: fillMissedCheckIns(parsed.goals, parsed.checkIns),
           initialized: true,
           language: parsed.language ?? get().language,
           notificationSettings:
             parsed.notificationSettings ?? get().notificationSettings,
         });
       },
-      save: (g) =>
-        set((s) => ({
-          goals: s.goals.some((x) => x.id === g.id)
-            ? s.goals.map((x) => (x.id === g.id ? g : x))
-            : [...s.goals, g],
-        })),
+      save: (g) => {
+        const goal = goalSchema.parse(g);
+        const s = get();
+        const goals = s.goals.some((x) => x.id === goal.id)
+          ? s.goals.map((x) => x.id === goal.id ? goal : x) : [...s.goals, goal];
+        // Keep backup validity when callers change a goal's schedule.
+        backupSchema.parse({ version: 1, goals, checkIns: s.checkIns });
+        set({ goals, checkIns: fillMissedCheckIns(goals, s.checkIns) });
+      },
+      reconcile: () => {
+        const s = get();
+        if (!s.initialized || s.storageError) return;
+        const checkIns = fillMissedCheckIns(s.goals, s.checkIns);
+        if (checkIns !== s.checkIns) set({ checkIns });
+      },
       reorderGoal: (activeId, targetId) =>
         set((s) => {
           const from = s.goals.findIndex((goal) => goal.id === activeId);
@@ -76,12 +91,17 @@ export const useStore = create<State>()(
           checkIns: s.checkIns.filter((r) => r.goalId !== id),
         })),
       check: (r) => {
+        const parsed = checkSchema.safeParse(r);
+        if (!parsed.success) return false;
+        r = parsed.data;
         const g = get().goals.find((g) => g.id === r.goalId);
-        if (!g || r.date !== day() || !scheduled(g, r.date)) return;
+        const today = day();
+        if (!g || r.date > today || !scheduled(g, r.date)) return false;
+        if (r.date < today && !canBackfill(g, r.date, today)) return false;
         const exists = get().checkIns.some(
           (x) => x.goalId === r.goalId && x.date === r.date,
         );
-        if (!exists && metrics(g, get().checkIns).status !== "active") return;
+        if (r.date === today && !exists && metrics(g, get().checkIns).status !== "active") return false;
         set((s) => ({
           checkIns: [
             ...s.checkIns.filter(
@@ -90,6 +110,7 @@ export const useStore = create<State>()(
             r,
           ],
         }));
+        return true;
       },
       redeem: (id) =>
         set((s) => ({

@@ -154,6 +154,31 @@ export function scheduled(g: GoalSchedule, d: string) {
     (g.frequency === "daily" || g.days.includes(getDay(parseISO(d))))
   );
 }
+/** Historical edits and automatic skips share the same status/date boundary. */
+export function canBackfill(g: Goal, d: string, today = day()) {
+  return date.safeParse(d).success && d < today &&
+    ["active", "completed", "expired"].includes(g.status) && scheduled(g, d);
+}
+
+export function fillMissedCheckIns(
+  goals: Goal[], records: CheckIn[], today = day(), now = new Date().toISOString(),
+): CheckIn[] {
+  const keys = new Set(records.map((r) => `${r.goalId}:${r.date}`));
+  const added: CheckIn[] = [];
+  for (const g of goals) {
+    if (!["active", "completed", "expired"].includes(g.status)) continue;
+    const end = g.endDate < today ? g.endDate : day(addDays(parseISO(today), -1));
+    for (const d of dates(g.startDate, end)) {
+      if (!scheduled(g, d) || keys.has(`${g.id}:${d}`)) continue;
+      added.push(checkSchema.parse({
+        goalId: g.id, date: d, result: "skipped", note: "", updatedAt: now,
+      }));
+      keys.add(`${g.id}:${d}`);
+    }
+  }
+  return added.length ? [...records, ...added] : records;
+}
+
 export function dates(start: string, end: string) {
   if (start > end) return [];
   return Array.from(
